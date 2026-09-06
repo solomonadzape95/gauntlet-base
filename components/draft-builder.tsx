@@ -3,8 +3,9 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, CheckCircle2, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { formatUnits } from "viem";
-import { useAccount } from "wagmi";
+import { erc20Abi, formatUnits, parseUnits, type Address, type Hex } from "viem";
+import { useAccount, usePublicClient, useSendTransaction, useSwitchChain, useWriteContract } from "wagmi";
+import { base } from "wagmi/chains";
 
 import { StockCard } from "@/components/stock-card";
 import { WalletStatus } from "@/components/wallet-status";
@@ -18,7 +19,16 @@ type PricePreview = {
   allocationUsd: number;
   buyAmount: string;
   liquidityAvailable: boolean;
+  allowanceSpender: string | null;
+  balanceIssue: boolean;
 };
+
+type FirmQuote = {
+  ticker: string;
+  transaction: { to: Address; data: Hex; value: string; gas?: string };
+};
+
+const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -27,7 +37,11 @@ const money = new Intl.NumberFormat("en-US", {
 });
 
 export function DraftBuilder() {
-  const { address, isConnected } = useAccount();
+  const { address, chainId, isConnected } = useAccount();
+  const publicClient = usePublicClient({ chainId: base.id });
+  const { switchChainAsync } = useSwitchChain();
+  const { writeContractAsync } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
   const [selected, setSelected] = useState<string[]>([]);
   const [step, setStep] = useState<Step>("select");
   const [realAmount, setRealAmount] = useState(5);
@@ -35,6 +49,11 @@ export function DraftBuilder() {
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [quoteError, setQuoteError] = useState("");
   const [quotes, setQuotes] = useState<PricePreview[]>([]);
+  const [approved, setApproved] = useState(false);
+  const [purchaseState, setPurchaseState] = useState<"idle" | "approving" | "buying" | "complete" | "error">("idle");
+  const [purchaseProgress, setPurchaseProgress] = useState(0);
+  const [purchaseError, setPurchaseError] = useState("");
+  const [receipts, setReceipts] = useState<string[]>([]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -55,6 +74,11 @@ export function DraftBuilder() {
     setQuoteState("idle");
     setQuoteError("");
     setQuotes([]);
+    setApproved(false);
+    setPurchaseState("idle");
+    setPurchaseProgress(0);
+    setPurchaseError("");
+    setReceipts([]);
   };
 
   const toggle = (ticker: string) => {
@@ -83,10 +107,76 @@ export function DraftBuilder() {
 
       if (!response.ok || !result.quotes) throw new Error(result.error ?? "Could not load live prices.");
       setQuotes(result.quotes);
+      setApproved(result.quotes.every((quote) => !quote.allowanceSpender));
       setQuoteState("ready");
     } catch (error) {
       setQuoteError(error instanceof Error ? error.message : "Could not load live prices.");
       setQuoteState("error");
+    }
+  };
+
+  const ensureBase = async () => {
+    if (chainId !== base.id) await switchChainAsync({ chainId: base.id });
+  };
+
+  const approveDraft = async () => {
+    const spender = quotes.find((quote) => quote.allowanceSpender)?.allowanceSpender;
+    if (!spender || !publicClient) return;
+    setPurchaseState("approving");
+    setPurchaseError("");
+
+    try {
+      await ensureBase();
+      const hash = await writeContractAsync({
+        address: BASE_USDC,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [spender as Address, parseUnits(String(realAmount), 6)],
+        chainId: base.id,
+      });
+      await publicClient.waitForTransactionReceipt({ hash });
+      setApproved(true);
+      setPurchaseState("idle");
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : "USDC approval failed.");
+      setPurchaseState("error");
+    }
+  };
+
+  const buyDraft = async () => {
+    if (!address || !publicClient || !approved) return;
+    setPurchaseState("buying");
+    setPurchaseProgress(receipts.length);
+    setPurchaseError("");
+    const confirmed = [...receipts];
+
+    try {
+      await ensureBase();
+      for (let index = confirmed.length; index < picks.length; index += 1) {
+        const response = await fetch("/api/firm-quote", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ticker: picks[index].ticker, allocationCents: Math.round(realSplit[index] * 100), taker: address }),
+        });
+        const result = (await response.json()) as FirmQuote & { error?: string };
+        if (!response.ok || !result.transaction) throw new Error(result.error ?? `Could not prepare ${picks[index].ticker}.`);
+
+        const hash = await sendTransactionAsync({
+          chainId: base.id,
+          to: result.transaction.to,
+          data: result.transaction.data,
+          value: BigInt(result.transaction.value),
+          gas: result.transaction.gas ? BigInt(result.transaction.gas) : undefined,
+        });
+        await publicClient.waitForTransactionReceipt({ hash });
+        confirmed.push(hash);
+        setReceipts([...confirmed]);
+        setPurchaseProgress(index + 1);
+      }
+      setPurchaseState("complete");
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : "The purchase stopped before completion.");
+      setPurchaseState("error");
     }
   };
 
@@ -244,8 +334,34 @@ export function DraftBuilder() {
                   >
                     {quoteState === "loading" ? <><LoaderCircle className="spin" size={17} /> CHECKING LIVE PRICES</> : quoteState === "ready" ? "REFRESH PRICE PREVIEW" : "PREVIEW LIVE PRICES"}
                   </button>
-                  {quoteState === "ready" && (
-                    <button className="purchase-next" disabled>WALLET PURCHASE COMING NEXT</button>
+                  {quoteState === "ready" && quotes.some((quote) => quote.balanceIssue) && (
+                    <p className="purchase-message error">This wallet needs at least ${realAmount.toFixed(2)} in USDC on Base.</p>
+                  )}
+                  {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && !approved && (
+                    <button className="purchase-next active" disabled={purchaseState === "approving"} onClick={approveDraft}>
+                      {purchaseState === "approving" ? "WAITING FOR BASE CONFIRMATION…" : `APPROVE EXACTLY $${realAmount} USDC`}
+                    </button>
+                  )}
+                  {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && approved && purchaseState !== "complete" && (
+                    <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying"} onClick={buyDraft}>
+                      {purchaseState === "buying"
+                        ? `CONFIRMING STOCK ${purchaseProgress + 1} OF 3…`
+                        : receipts.length > 0
+                          ? `RESUME WITH STOCK ${receipts.length + 1} OF 3`
+                          : "BUY MY THREE STOCKS"}
+                    </button>
+                  )}
+                  {purchaseState === "error" && <p className="purchase-message error">{purchaseError}</p>}
+                  {purchaseState === "complete" && (
+                    <div className="purchase-complete">
+                      <CheckCircle2 size={19} />
+                      <div><strong>DRAFT OWNED</strong><span>Three purchases confirmed on Base.</span></div>
+                    </div>
+                  )}
+                  {receipts.length > 0 && (
+                    <div className="receipt-list">
+                      {receipts.map((hash, index) => <a key={hash} href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer">STOCK {index + 1} RECEIPT ↗</a>)}
+                    </div>
                   )}
                   <p className="legal-copy">Real purchases are for eligible adults outside the United States. This is not investment advice.</p>
                 </div>

@@ -196,6 +196,17 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .eligibility-check { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; margin: 16px 0; color: var(--dim); font-size: 11px; line-height: 1.5; cursor: pointer; }
 .eligibility-check input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--hazard); }
 .purchase-next { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed var(--edge); background: transparent; color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.purchase-next.active { border-style: solid; border-color: var(--signal); color: var(--signal); }
+.purchase-next.active:hover:not(:disabled) { background: var(--signal); color: var(--void); }
+.purchase-message { margin: 12px 0 0; font-size: 11px; line-height: 1.5; }
+.purchase-message.error { color: var(--ember); }
+.purchase-complete { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 15px; border: 1px solid color-mix(in srgb,var(--signal) 40%,var(--edge)); color: var(--signal); }
+.purchase-complete strong, .purchase-complete span { display: block; }
+.purchase-complete strong { font: 500 11px/1 var(--font-utility); letter-spacing: .1em; }
+.purchase-complete span { margin-top: 5px; color: var(--dim); font-size: 11px; }
+.receipt-list { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 9px; }
+.receipt-list a { padding: 9px 5px; border: 1px solid var(--edge); color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .06em; text-align: center; }
+.receipt-list a:hover { border-color: var(--signal); color: var(--signal); }
 .spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .legal-copy { color: var(--faint); font-size: 11px; line-height: 1.5; text-align: center; }

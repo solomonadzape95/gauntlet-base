@@ -79,6 +79,11 @@ export async function POST(request: Request) {
           throw new Error(reason);
         }
 
+        const issues = result.issues as {
+          allowance?: { spender?: unknown } | null;
+          balance?: unknown;
+        } | undefined;
+
         return {
           ticker,
           company: stock.company,
@@ -86,6 +91,8 @@ export async function POST(request: Request) {
           buyAmount: String(result.buyAmount ?? "0"),
           buyToken: stock.contractAddress,
           liquidityAvailable: result.liquidityAvailable !== false,
+          allowanceSpender: typeof issues?.allowance?.spender === "string" ? issues.allowance.spender : null,
+          balanceIssue: Boolean(issues?.balance),
         };
       }),
     );
