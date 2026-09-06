@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Activity, BarChart3, Swords } from "lucide-react";
 
 import { Logo } from "@/components/logo";
+import { WalletButton } from "@/components/wallet-button";
 
 const links = [
   { href: "/draft", label: "Draft", icon: Swords },
@@ -27,9 +28,7 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <Link className="wallet-stub" href="/draft">
-          PLAY FREE
-        </Link>
+        <WalletButton compact />
       </div>
     </header>
   );

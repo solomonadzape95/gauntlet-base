@@ -67,6 +67,15 @@ nav { display: flex; align-self: stretch; }
 .nav-link:hover { color: var(--ink); border-color: var(--hazard); }
 .wallet-stub { padding: 11px 17px; border: 1px solid var(--edge); font: 500 11px/1 var(--font-utility); letter-spacing: .12em; transition: .2s; }
 .wallet-stub:hover { background: var(--hazard); color: var(--void); border-color: var(--hazard); }
+.wallet-options { display: grid; gap: 8px; margin-bottom: 12px; }
+.wallet-options.compact { position: absolute; top: 58px; right: max(20px,calc((100vw - 1380px)/2)); z-index: 60; min-width: 220px; padding: 10px; border: 1px solid var(--edge); background: var(--surface); box-shadow: 0 24px 60px #000b; }
+.wallet-options button { min-height: 42px; padding: 0 14px; border: 1px solid var(--edge); background: var(--raised); color: var(--ink); font: 500 10px/1 var(--font-utility); letter-spacing: .09em; text-align: left; }
+.wallet-options button:hover:not(:disabled) { border-color: var(--hazard); color: var(--hazard); }
+.wallet-empty { margin: 0; padding: 10px 8px; color: var(--faint); font-size: 12px; line-height: 1.5; }
+.connected-wallet { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 28px 0 14px; padding: 16px; border: 1px solid var(--edge); }
+.connected-wallet > div { min-width: 0; }
+.connected-wallet strong { display: block; overflow: hidden; margin-top: 7px; font: 400 12px/1 var(--font-utility); text-overflow: ellipsis; }
+.connected-wallet .primary-action { grid-column: 1 / -1; }
 
 .hero { min-height: calc(100svh - 68px); padding-block: clamp(70px,8vw,120px); display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; gap: clamp(60px,9vw,150px); }
 .hero-copy h1, .page-heading h1, .battle-heading h1 { margin: 24px 0; font-family: var(--font-display); font-weight: 600; font-size: clamp(58px,6.4vw,108px); line-height: .82; letter-spacing: -.045em; text-transform: uppercase; }
@@ -181,6 +190,14 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .integration-notice .status-dot { margin-top: 5px; flex: 0 0 auto; }
 .integration-notice p, .data-notice p, .battle-proof p { margin: 0; font-size: 12px; line-height: 1.5; }
 .integration-notice strong, .data-notice strong { display: block; margin-bottom: 4px; color: var(--signal); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.integration-notice.error { border-color: color-mix(in srgb,var(--ember) 45%,var(--edge)); background: color-mix(in srgb,var(--ember) 7%,transparent); }
+.integration-notice.error .status-dot { background: var(--ember); box-shadow: 0 0 12px var(--ember); }
+.integration-notice.error strong { color: var(--ember); }
+.eligibility-check { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; margin: 16px 0; color: var(--dim); font-size: 11px; line-height: 1.5; cursor: pointer; }
+.eligibility-check input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--hazard); }
+.purchase-next { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed var(--edge); background: transparent; color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .legal-copy { color: var(--faint); font-size: 11px; line-height: 1.5; text-align: center; }
 
 .battle-status { display: flex; justify-content: space-between; padding-block: 14px; border-block: 1px solid var(--edge); color: var(--signal); font: 500 11px/1 var(--font-utility); letter-spacing: .1em; }

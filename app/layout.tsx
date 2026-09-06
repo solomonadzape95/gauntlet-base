@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
@@ -12,9 +13,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <div className="dither-overlay" aria-hidden />
-        <SiteHeader />
-        <main>{children}</main>
+        <Providers>
+          <div className="dither-overlay" aria-hidden />
+          <SiteHeader />
+          <main>{children}</main>
+        </Providers>
       </body>
     </html>
   );

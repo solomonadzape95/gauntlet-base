@@ -1,13 +1,24 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, CheckCircle2, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { formatUnits } from "viem";
+import { useAccount } from "wagmi";
 
 import { StockCard } from "@/components/stock-card";
-import { DEFAULT_DRAFT, getStock, STOCKS } from "@/lib/stocks";
+import { WalletStatus } from "@/components/wallet-status";
+import { B20_DECIMALS, DEFAULT_DRAFT, getStock, STOCKS } from "@/lib/stocks";
 
 type Step = "select" | "review" | "own";
+
+type PricePreview = {
+  ticker: string;
+  company: string;
+  allocationUsd: number;
+  buyAmount: string;
+  liquidityAvailable: boolean;
+};
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -16,9 +27,14 @@ const money = new Intl.NumberFormat("en-US", {
 });
 
 export function DraftBuilder() {
+  const { address, isConnected } = useAccount();
   const [selected, setSelected] = useState<string[]>([]);
   const [step, setStep] = useState<Step>("select");
   const [realAmount, setRealAmount] = useState(5);
+  const [eligible, setEligible] = useState(false);
+  const [quoteState, setQuoteState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [quoteError, setQuoteError] = useState("");
+  const [quotes, setQuotes] = useState<PricePreview[]>([]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -35,7 +51,14 @@ export function DraftBuilder() {
     return [0, 1, 2].map((index) => (equalCents + (index < remainder ? 1 : 0)) / 100);
   }, [realAmount]);
 
+  const resetQuote = () => {
+    setQuoteState("idle");
+    setQuoteError("");
+    setQuotes([]);
+  };
+
   const toggle = (ticker: string) => {
+    resetQuote();
     setSelected((current) =>
       current.includes(ticker)
         ? current.filter((item) => item !== ticker)
@@ -43,6 +66,28 @@ export function DraftBuilder() {
           ? [...current, ticker]
           : current,
     );
+  };
+
+  const previewPrices = async () => {
+    if (!address || !eligible) return;
+    setQuoteState("loading");
+    setQuoteError("");
+
+    try {
+      const response = await fetch("/api/quotes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ amount: realAmount, taker: address, tickers: selected }),
+      });
+      const result = (await response.json()) as { error?: string; quotes?: PricePreview[] };
+
+      if (!response.ok || !result.quotes) throw new Error(result.error ?? "Could not load live prices.");
+      setQuotes(result.quotes);
+      setQuoteState("ready");
+    } catch (error) {
+      setQuoteError(error instanceof Error ? error.message : "Could not load live prices.");
+      setQuoteState("error");
+    }
   };
 
   return (
@@ -159,26 +204,49 @@ export function DraftBuilder() {
                   <label className="eyebrow">TOTAL PURCHASE</label>
                   <div className="amount-options">
                     {[5, 10, 25].map((amount) => (
-                      <button key={amount} onClick={() => setRealAmount(amount)} className={realAmount === amount ? "active" : ""}>${amount}</button>
+                      <button key={amount} onClick={() => { resetQuote(); setRealAmount(amount); }} className={realAmount === amount ? "active" : ""}>${amount}</button>
                     ))}
                   </div>
 
                   <div className="receive-list">
-                    <p className="eyebrow">ESTIMATED SPLIT</p>
+                    <p className="eyebrow">{quoteState === "ready" ? "LIVE PRICE PREVIEW" : "DOLLAR SPLIT"}</p>
                     {picks.map((stock, index) => (
                       <div key={stock.ticker}>
                         <span><i style={{ background: stock.tone }} /> {stock.ticker}</span>
-                        <strong>${realSplit[index].toFixed(2)}</strong>
+                        <strong>
+                          {quotes[index]
+                            ? `≈ ${Number(formatUnits(BigInt(quotes[index].buyAmount), B20_DECIMALS)).toLocaleString("en-US", { maximumSignificantDigits: 5 })} ${stock.ticker}`
+                            : `$${realSplit[index].toFixed(2)}`}
+                        </strong>
                       </div>
                     ))}
                   </div>
 
-                  <div className="integration-notice">
+                  <div className={`integration-notice ${quoteState === "error" ? "error" : ""}`}>
                     <span className="status-dot" />
-                    <p><strong>TRANSACTION INTEGRATION NEXT</strong>Official B20 addresses and live 0x quotes must be verified before purchases are enabled.</p>
+                    <p>
+                      <strong>{quoteState === "ready" ? "PRICES FOUND · PREVIEW ONLY" : quoteState === "error" ? "PRICE PREVIEW UNAVAILABLE" : "NO PURCHASE YET"}</strong>
+                      {quoteState === "ready"
+                        ? "These estimates can change before you approve a purchase in your wallet."
+                        : quoteError || "Connect a wallet and pass the eligibility check to preview live B20 prices."}
+                    </p>
                   </div>
 
-                  <button className="primary-action full" disabled>CONNECT WALLET TO CONTINUE</button>
+                  <WalletStatus />
+                  <label className="eligibility-check">
+                    <input type="checkbox" checked={eligible} onChange={(event) => setEligible(event.target.checked)} />
+                    <span>I confirm I am 18 or older, outside the United States, and permitted to access these tokenized stocks [blockchain tokens that track stock value] where I live.</span>
+                  </label>
+                  <button
+                    className="primary-action full"
+                    disabled={!isConnected || !eligible || quoteState === "loading"}
+                    onClick={previewPrices}
+                  >
+                    {quoteState === "loading" ? <><LoaderCircle className="spin" size={17} /> CHECKING LIVE PRICES</> : quoteState === "ready" ? "REFRESH PRICE PREVIEW" : "PREVIEW LIVE PRICES"}
+                  </button>
+                  {quoteState === "ready" && (
+                    <button className="purchase-next" disabled>WALLET PURCHASE COMING NEXT</button>
+                  )}
                   <p className="legal-copy">Real purchases are for eligible adults outside the United States. This is not investment advice.</p>
                 </div>
               </div>
