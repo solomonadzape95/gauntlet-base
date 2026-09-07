@@ -1,5 +1,3 @@
-import { Check, Plus } from "lucide-react";
-
 import { StockLogo } from "@/components/stock-logo";
 import type { Stock } from "@/lib/stocks";
 
@@ -23,14 +21,13 @@ export function StockCard({
     <Tag
       {...(interactive ? { type: "button", onClick: onSelect, disabled } : {})}
       className={`stock-card ${selected ? "selected" : ""} ${disabled ? "disabled" : ""}`}
-      style={{ "--stock-tone": stock.tone } as React.CSSProperties}
+      style={{ "--stock-tone": stock.tone, "--logo-color": stock.logoColor } as React.CSSProperties}
+      aria-pressed={interactive ? selected : undefined}
     >
       <div className="stock-card-top">
         <span className="stock-index">{String(index ?? 0).padStart(2, "0")}</span>
-        <span className="selection-mark" aria-hidden>
-          {selected ? <Check size={15} /> : <Plus size={15} />}
-        </span>
       </div>
+      {selected && <span className="stock-wave" aria-hidden />}
       <div className="stock-logo">
         <StockLogo ticker={stock.ticker} />
       </div>

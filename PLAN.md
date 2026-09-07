@@ -51,7 +51,7 @@ The most important number is **new B20-owning wallets** [wallets that held none 
 ### V1 must do
 
 1. Let anyone create a three-to-five-stock fantasy draft without connecting a wallet.
-2. Display a $100,000 virtual portfolio divided equally across all picks.
+2. Display a $100,000 virtual portfolio the player can allocate across all picks, with an equal-split shortcut.
 3. Explain the difference between virtual selections and real ownership.
 4. Restrict real purchase functionality to eligible non-US adults.
 5. Connect a Base-compatible wallet.
@@ -98,9 +98,9 @@ No wallet is requested here.
 
 The player selects between three and five stocks from an allowlist [a deliberately approved list] of official Coinbase tokenized stocks.
 
-For V1, all picks have equal weight:
+For V1, players set the weight of each pick by allocating the full virtual $100,000. The interface begins with an equal split, then lets them express stronger or weaker conviction before locking the portfolio:
 
-The $100,000 virtual balance is divided as evenly as possible across however many stocks the player selects. Remainder dollars are assigned deterministically so the displayed total is always exactly $100,000.
+The default divides the $100,000 virtual balance as evenly as possible. Players can then edit exact dollar allocations, but the total must remain exactly $100,000 before they continue.
 
 Stock cards should be neutral and consistent. They may show company name, ticker, verified status, current price, and recent price movement, but must not label anything as `recommended`, `safe`, or `best`.
 
@@ -233,10 +233,10 @@ For each stock:
 stock return = (current total-return price / starting total-return price) - 1
 ```
 
-For the equal-weight portfolio:
+For the allocation-weighted portfolio:
 
 ```text
-portfolio return = sum of selected stock returns / number of selected stocks
+portfolio return = sum of (stock return × that stock's share of the virtual $100,000)
 ```
 
 A **total-return price** [a price adjusted to account for dividends and stock splits] should come from the official Chainlink feed associated with the B20 token.
@@ -654,7 +654,7 @@ Viewer opens battle
   -> server loads battle and start snapshots
   -> server reads or briefly caches current Chainlink prices
   -> score engine calculates each stock return
-  -> equal-weight returns become portfolio scores
+  -> allocation-weighted returns become portfolio scores
   -> browser displays ranks and contribution chart
   -> polling repeats at a reasonable interval
 ```
@@ -876,7 +876,7 @@ Finish with:
 
 Only after the V1 loop proves conversion:
 
-1. Editable portfolio weights.
+1. Advanced rebalancing after a draft begins.
 2. Recurring leagues and seasons.
 3. Creator-hosted Stock Battles.
 4. Stock-specific Owner Clubs.

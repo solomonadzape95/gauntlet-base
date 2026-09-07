@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAddress } from "viem";
 
 import { getStock } from "@/lib/stocks";
+import { allocateByWeight, VIRTUAL_BUDGET } from "@/lib/allocations";
 
 const BASE_CHAIN_ID = 8453;
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -10,16 +11,10 @@ const ALLOWED_TOTALS = new Set([5, 10, 25]);
 type QuoteRequest = {
   amount?: unknown;
   taker?: unknown;
-  tickers?: unknown;
+  allocations?: unknown;
 };
 
-function splitIntoCents(amount: number, count: number) {
-  const totalCents = amount * 100;
-  const equalCents = Math.floor(totalCents / count);
-  const remainder = totalCents - equalCents * count;
-
-  return Array.from({ length: count }, (_, index) => equalCents + (index < remainder ? 1 : 0));
-}
+type RequestedAllocation = { ticker: string; virtualAmount: number };
 
 export async function POST(request: Request) {
   let body: QuoteRequest;
@@ -30,8 +25,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "The quote request is not valid JSON." }, { status: 400 });
   }
 
-  const { amount, taker, tickers } = body;
-  const uniqueTickers = Array.isArray(tickers) ? [...new Set(tickers)] : [];
+  const { amount, taker, allocations: requestedAllocations } = body;
+  const allocations = Array.isArray(requestedAllocations) ? requestedAllocations : [];
 
   if (!ALLOWED_TOTALS.has(Number(amount))) {
     return NextResponse.json({ error: "Choose a $5, $10, or $25 draft." }, { status: 400 });
@@ -41,8 +36,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Connect a valid wallet before requesting prices." }, { status: 400 });
   }
 
-  if (uniqueTickers.length < 3 || uniqueTickers.length > 5 || uniqueTickers.some((ticker) => typeof ticker !== "string" || !getStock(ticker))) {
-    return NextResponse.json({ error: "A quote requires three to five supported stocks." }, { status: 400 });
+  const validAllocations = allocations.every((allocation): allocation is RequestedAllocation => {
+    if (!allocation || typeof allocation !== "object") return false;
+    const entry = allocation as Record<string, unknown>;
+    return typeof entry.ticker === "string"
+      && Boolean(getStock(entry.ticker))
+      && Number.isInteger(entry.virtualAmount)
+      && Number(entry.virtualAmount) > 0;
+  });
+  const tickers = validAllocations ? allocations.map((allocation) => allocation.ticker) : [];
+  const uniqueTickers = new Set(tickers);
+  const virtualTotal = validAllocations
+    ? allocations.reduce((total, allocation) => total + allocation.virtualAmount, 0)
+    : 0;
+
+  if (!validAllocations || allocations.length < 3 || allocations.length > 5 || uniqueTickers.size !== allocations.length) {
+    return NextResponse.json({ error: "A quote requires three to five unique supported stocks." }, { status: 400 });
+  }
+
+  if (virtualTotal !== VIRTUAL_BUDGET) {
+    return NextResponse.json({ error: "Allocate the full virtual $100,000 before requesting prices." }, { status: 400 });
   }
 
   const apiKey = process.env.ZEROX_API_KEY;
@@ -53,19 +66,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const allocations = splitIntoCents(Number(amount), uniqueTickers.length);
+  const purchaseCents = allocateByWeight(
+    allocations.map((allocation) => allocation.virtualAmount),
+    Number(amount) * 100,
+  );
 
   try {
     const quotes = await Promise.all(
-      uniqueTickers.map(async (ticker, index) => {
-        const stock = getStock(String(ticker));
+      allocations.map(async ({ ticker }, index) => {
+        const stock = getStock(ticker);
         if (!stock) throw new Error("Unsupported stock");
 
         const query = new URLSearchParams({
           chainId: String(BASE_CHAIN_ID),
           sellToken: BASE_USDC,
           buyToken: stock.contractAddress,
-          sellAmount: String(allocations[index] * 10_000),
+          sellAmount: String(purchaseCents[index] * 10_000),
           taker,
         });
         const response = await fetch(`https://api.0x.org/swap/allowance-holder/price?${query}`, {
@@ -91,7 +107,7 @@ export async function POST(request: Request) {
         return {
           ticker,
           company: stock.company,
-          allocationUsd: allocations[index] / 100,
+          allocationUsd: purchaseCents[index] / 100,
           buyAmount: String(result.buyAmount ?? "0"),
           buyToken: stock.contractAddress,
           liquidityAvailable: result.liquidityAvailable !== false,
