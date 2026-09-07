@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Activity, BarChart3, Swords } from "lucide-react";
+import { Activity, BarChart3, LayoutDashboard, Swords } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { WalletButton } from "@/components/wallet-button";
 
 const links = [
   { href: "/draft", label: "Draft", icon: Swords },
+  { href: "/me", label: "Desk", icon: LayoutDashboard },
   { href: "/battle/demo", label: "Battle", icon: Activity },
   { href: "/impact", label: "Impact", icon: BarChart3 },
 ];
@@ -16,7 +17,6 @@ export function SiteHeader() {
       <div className="shell header-inner">
         <Link href="/" className="brand" aria-label="Gauntlet home">
           <Logo />
-          <span>GAUNTLET</span>
         </Link>
 
         <nav aria-label="Primary navigation">

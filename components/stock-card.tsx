@@ -27,7 +27,6 @@ export function StockCard({
       <div className="stock-card-top">
         <span className="stock-index">{String(index ?? 0).padStart(2, "0")}</span>
       </div>
-      {selected && <span className="stock-wave" aria-hidden />}
       <div className="stock-logo">
         <StockLogo ticker={stock.ticker} />
       </div>

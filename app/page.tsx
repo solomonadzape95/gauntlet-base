@@ -1,38 +1,38 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { StockCard } from "@/components/stock-card";
-import { STOCKS } from "@/lib/stocks";
+import { MarketStrip } from "@/components/market-strip";
 
 export default function Home() {
   return (
     <>
-      <main className="landing shell">
-        <section className="landing-intro">
-          <p className="eyebrow hazard">FANTASY STOCKS · POWERED BY BASE</p>
-          <h1>PLAY THE MARKET.<br /><em>OWN YOUR PICKS.</em></h1>
-          <p className="hero-lede">
-            Draft 3–5 companies with $100,000 in virtual funds, compete on performance,
-            then optionally buy a small version using tokenized stocks [digital tokens that track stock value].
-          </p>
-          <div className="hero-actions">
-            <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>
-            <Link className="secondary-action" href="/battle/demo">SEE A BATTLE</Link>
+      <div className="landing">
+        <section className="landing-word shell">
+          <p className="eyebrow hazard">THE FANTASY MARKET · FREE TO PLAY</p>
+          <h1>PLAY.</h1>
+          <p>Build a $100,000 virtual portfolio. No wallet. No deposit. Just your read on the market.</p>
+        </section>
+
+        <MarketStrip />
+
+        <section className="landing-word landing-own shell">
+          <p className="eyebrow hazard">WHEN YOU ARE READY · POWERED BY BASE</p>
+          <h2>OWN.</h2>
+          <div className="landing-own-copy">
+            <p>Keep playing for free, or optionally buy a small version of your lineup using tokenized stocks [digital tokens that track stock value].</p>
+            <div className="hero-actions">
+              <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>
+              <Link className="secondary-action" href="/battle/demo">WATCH A BATTLE</Link>
+            </div>
           </div>
         </section>
 
-        <section className="landing-cards" aria-label="Stocks available to draft">
-          {STOCKS.slice(0, 4).map((stock, index) => (
-            <StockCard stock={stock} index={index + 1} key={stock.ticker} />
-          ))}
-        </section>
-
-        <section className="landing-flow" aria-label="How Gauntlet works">
+        <section className="landing-flow shell" aria-label="How Gauntlet works">
           <FlowStep number="01" title="DRAFT" copy="Choose 3–5 stocks and decide how to allocate your virtual $100K." />
-          <FlowStep number="02" title="OWN" copy="Optionally buy the same weighted portfolio from $5, directly to your wallet." />
-          <FlowStep number="03" title="BATTLE" copy="Challenge friends. Percentage performance—not money spent—decides who wins." />
+          <FlowStep number="02" title="PLAY" copy="Save the portfolio and enter a practice battle. Real money is never required." />
+          <FlowStep number="03" title="OWN" copy="If eligible, optionally buy the same weighted portfolio directly to your wallet." />
         </section>
-      </main>
+      </div>
 
       <footer className="site-footer shell">
         <span>GAUNTLET · SEASON 0</span>

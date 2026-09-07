@@ -10,8 +10,8 @@ const metrics = [
 export default function ImpactPage() {
   return (
     <div className="shell page-shell impact-page">
-      <header className="page-heading split-heading">
-        <div><p className="eyebrow hazard">PUBLIC PROOF · BASE MAINNET</p><h1>USAGE,<br /><em>NOT CLAIMS.</em></h1></div>
+      <header className="dashboard-titlebar">
+        <div><p className="eyebrow hazard">PUBLIC PROOF · BASE MAINNET</p><h1>Verified impact</h1></div>
         <p className="heading-aside">This dashboard will count confirmed B20 activity created through Gauntlet. Empty numbers remain empty until real transactions exist.</p>
       </header>
       <div className="data-notice"><RadioTower size={17} /><p><strong>INTEGRATION MODE</strong> Live indexing is not connected yet. No demonstration data is included in adoption totals.</p></div>

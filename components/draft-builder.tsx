@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, CheckCircle2, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits, type Address, type Hex } from "viem";
 import { useAccount, usePublicClient, useSendTransaction, useSwitchChain, useWriteContract } from "wagmi";
@@ -10,6 +11,7 @@ import { base } from "wagmi/chains";
 import { StockCard } from "@/components/stock-card";
 import { WalletStatus } from "@/components/wallet-status";
 import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "@/lib/allocations";
+import { savePracticeDraft } from "@/lib/practice-game";
 import { B20_DECIMALS, DEFAULT_DRAFT, getStock, STOCKS } from "@/lib/stocks";
 
 type Step = "select" | "review" | "own";
@@ -40,6 +42,7 @@ const money = new Intl.NumberFormat("en-US", {
 });
 
 export function DraftBuilder() {
+  const router = useRouter();
   const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient({ chainId: base.id });
   const { switchChainAsync } = useSwitchChain();
@@ -60,7 +63,7 @@ export function DraftBuilder() {
   const [receipts, setReceipts] = useState<string[]>([]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "auto" });
   }, [step]);
 
   const picks = useMemo(
@@ -113,6 +116,12 @@ export function DraftBuilder() {
     resetQuote();
     const amount = Math.max(0, Math.min(VIRTUAL_BUDGET, Math.round(Number(value) || 0)));
     setVirtualAllocations((current) => ({ ...current, [ticker]: amount }));
+  };
+
+  const playForFree = () => {
+    if (!allocationsValid) return;
+    savePracticeDraft(selected.map((ticker) => ({ ticker, virtualAmount: virtualAllocations[ticker] })));
+    router.push("/me");
   };
 
   const previewPrices = async () => {
@@ -311,9 +320,10 @@ export function DraftBuilder() {
               </div>
             </div>
 
-            <div className="action-pair">
+            <div className="action-pair review-actions">
               <button className="secondary-action" onClick={() => setStep("select")}>EDIT PICKS</button>
-              <button className="primary-action" disabled={!allocationsValid} onClick={() => setStep("own")}>MAKE THIS DRAFT REAL <ArrowRight size={18} /></button>
+              <button className="secondary-action" disabled={!allocationsValid} onClick={() => setStep("own")}>OWN THIS DRAFT</button>
+              <button className="primary-action" disabled={!allocationsValid} onClick={playForFree}>SAVE & PLAY FREE <ArrowRight size={18} /></button>
             </div>
           </motion.section>
         )}
