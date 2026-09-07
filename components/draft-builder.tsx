@@ -251,11 +251,10 @@ export function DraftBuilder() {
             </div>
 
             <div className="stock-grid">
-              {STOCKS.map((stock, index) => (
+              {STOCKS.map((stock) => (
                 <StockCard
                   key={stock.ticker}
                   stock={stock}
-                  index={index + 1}
                   selected={selected.includes(stock.ticker)}
                   disabled={selected.length === MAX_PICKS && !selected.includes(stock.ticker)}
                   onSelect={() => toggle(stock.ticker)}

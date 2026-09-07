@@ -23,7 +23,7 @@ export function MarketStrip() {
                 <span>{quote.ticker}</span>
                 <strong className={quote.change >= 0 ? "up" : "down"}>{quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)}%</strong>
               </div>
-              <div className="market-tile-logo"><StockLogo ticker={quote.ticker} /></div>
+              <div className={`market-tile-logo ${quote.ticker === "SNDKc" ? "wide-logo" : ""}`}><StockLogo ticker={quote.ticker} /></div>
               <div><p>{stock.company}</p><strong>${quote.price.toFixed(2)}</strong></div>
             </article>
           );

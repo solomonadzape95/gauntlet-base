@@ -33,18 +33,18 @@ export function PlayerDashboard() {
       {latest ? (
         <div className="dashboard-grid">
           <section className="dashboard-panel portfolio-card">
-            <div className="panel-heading"><div><p className="eyebrow">CURRENT LINEUP</p><h2>Virtual portfolio</h2></div><span className="status-chip"><span /> LIVE</span></div>
-            <div className="dashboard-holdings">
+            <div className="panel-heading"><div><p className="eyebrow">CURRENT LINEUP</p><h2>Market lineup</h2></div><span className="status-chip"><span /> LIVE</span></div>
+            <div className="team-lineup" data-count={latest.picks.length}>
               {latest.picks.map((pick) => {
                 const stock = getStock(pick.ticker);
                 const quote = MARKET_QUOTES.find((item) => item.ticker === pick.ticker);
                 if (!stock || !quote) return null;
                 return (
-                  <div key={pick.ticker}>
-                    <span className="holding-logo" style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span>
+                  <article className="lineup-player" key={pick.ticker} style={{ "--stock-tone": stock.tone } as React.CSSProperties}>
+                    <span className={`holding-logo ${pick.ticker === "SNDKc" ? "wide-logo" : ""}`} style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span>
                     <span><strong>{stock.company}</strong><small>{pick.ticker} · {money.format(pick.virtualAmount)}</small></span>
                     <strong className={quote.change >= 0 ? "up" : "down"}>{quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)}%</strong>
-                  </div>
+                  </article>
                 );
               })}
             </div>

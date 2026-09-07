@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <>
       <div className="landing">
-        <section className="landing-word shell">
+        <section className="landing-word landing-play shell">
           <p className="eyebrow hazard">THE FANTASY MARKET · FREE TO PLAY</p>
           <h1>PLAY.</h1>
           <p>Build a $100,000 virtual portfolio. No wallet. No deposit. Just your read on the market.</p>
@@ -16,9 +16,9 @@ export default function Home() {
         <MarketStrip />
 
         <section className="landing-word landing-own shell">
-          <p className="eyebrow hazard">WHEN YOU ARE READY · POWERED BY BASE</p>
           <h2>OWN.</h2>
           <div className="landing-own-copy">
+            <p className="eyebrow hazard">WHEN YOU ARE READY · POWERED BY BASE</p>
             <p>Keep playing for free, or optionally buy a small version of your lineup using tokenized stocks [digital tokens that track stock value].</p>
             <div className="hero-actions">
               <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>

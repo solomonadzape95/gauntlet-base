@@ -1,4 +1,5 @@
 import { StockLogo } from "@/components/stock-logo";
+import { MARKET_QUOTES } from "@/lib/practice-game";
 import type { Stock } from "@/lib/stocks";
 
 export function StockCard({
@@ -6,16 +7,15 @@ export function StockCard({
   selected = false,
   disabled = false,
   onSelect,
-  index,
 }: {
   stock: Stock;
   selected?: boolean;
   disabled?: boolean;
   onSelect?: () => void;
-  index?: number;
 }) {
   const interactive = Boolean(onSelect);
   const Tag = interactive ? "button" : "article";
+  const quote = MARKET_QUOTES.find((item) => item.ticker === stock.ticker);
 
   return (
     <Tag
@@ -25,15 +25,15 @@ export function StockCard({
       aria-pressed={interactive ? selected : undefined}
     >
       <div className="stock-card-top">
-        <span className="stock-index">{String(index ?? 0).padStart(2, "0")}</span>
+        <span>{stock.ticker}</span>
+        {quote && <strong className={quote.change >= 0 ? "up" : "down"}>{quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)}%</strong>}
       </div>
-      <div className="stock-logo">
+      <div className={`stock-logo ${stock.ticker === "SNDKc" ? "wide-logo" : ""}`}>
         <StockLogo ticker={stock.ticker} />
       </div>
-      <div>
-        <p className="eyebrow">{stock.sector}</p>
+      <div className="stock-card-bottom">
         <h3>{stock.company}</h3>
-        <p className="ticker">{stock.ticker}</p>
+        {quote && <strong>${quote.price.toFixed(2)}</strong>}
       </div>
     </Tag>
   );
