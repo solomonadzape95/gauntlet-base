@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CircleDot, Clock3, Swords, Trophy } from "lucide-react";
+import { ArrowRight, CircleDot, Clock3, LockKeyhole, Swords, Trophy } from "lucide-react";
+import { useAccount } from "wagmi";
 
 import { StockLogo } from "@/components/stock-logo";
+import { WalletButton } from "@/components/wallet-button";
 import { MARKET_QUOTES, scoreDraft } from "@/lib/practice-game";
 import { getStock } from "@/lib/stocks";
 import { usePracticeDrafts } from "@/lib/use-practice-drafts";
@@ -11,10 +13,28 @@ import { usePracticeDrafts } from "@/lib/use-practice-drafts";
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 export function PlayerDashboard() {
+  const { isConnected } = useAccount();
   const drafts = usePracticeDrafts();
 
   const latest = drafts[0];
   const score = latest ? scoreDraft(latest) : 0;
+
+  if (!isConnected) {
+    return (
+      <div className="dashboard-shell shell page-shell">
+        <section className="dashboard-gate dashboard-panel">
+          <span className="gate-icon"><LockKeyhole size={30} /></span>
+          <p className="eyebrow hazard">PLAYER DESK · WALLET ACCESS</p>
+          <h1>Connect to enter your desk.</h1>
+          <p>Connect a wallet to open the dashboard. You can still draft and play practice battles without one.</p>
+          <div className="gate-actions">
+            <WalletButton />
+            <Link className="secondary-action" href="/draft">PLAY WITHOUT A WALLET</Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-shell shell page-shell">
@@ -33,18 +53,18 @@ export function PlayerDashboard() {
       {latest ? (
         <div className="dashboard-grid">
           <section className="dashboard-panel portfolio-card">
-            <div className="panel-heading"><div><p className="eyebrow">CURRENT LINEUP</p><h2>Market lineup</h2></div><span className="status-chip"><span /> LIVE</span></div>
-            <div className="team-lineup" data-count={latest.picks.length}>
+            <div className="panel-heading"><div><p className="eyebrow">CURRENT LINEUP</p><h2>Virtual portfolio</h2></div><span className="status-chip"><span /> LIVE</span></div>
+            <div className="dashboard-holdings">
               {latest.picks.map((pick) => {
                 const stock = getStock(pick.ticker);
                 const quote = MARKET_QUOTES.find((item) => item.ticker === pick.ticker);
                 if (!stock || !quote) return null;
                 return (
-                  <article className="lineup-player" key={pick.ticker} style={{ "--stock-tone": stock.tone } as React.CSSProperties}>
+                  <div key={pick.ticker}>
                     <span className={`holding-logo ${pick.ticker === "SNDKc" ? "wide-logo" : ""}`} style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span>
                     <span><strong>{stock.company}</strong><small>{pick.ticker} · {money.format(pick.virtualAmount)}</small></span>
                     <strong className={quote.change >= 0 ? "up" : "down"}>{quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)}%</strong>
-                  </article>
+                  </div>
                 );
               })}
             </div>

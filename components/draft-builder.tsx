@@ -121,7 +121,7 @@ export function DraftBuilder() {
   const playForFree = () => {
     if (!allocationsValid) return;
     savePracticeDraft(selected.map((ticker) => ({ ticker, virtualAmount: virtualAllocations[ticker] })));
-    router.push("/me");
+    router.push(isConnected ? "/me" : "/battle/demo");
   };
 
   const previewPrices = async () => {
