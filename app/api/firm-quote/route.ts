@@ -55,7 +55,11 @@ export async function POST(request: Request) {
     const result = (await response.json()) as Record<string, unknown>;
 
     if (!response.ok) {
-      const reason = typeof result.reason === "string" ? result.reason : `Could not prepare ${stock.ticker}.`;
+      const reason = typeof result.message === "string"
+        ? result.message
+        : typeof result.reason === "string"
+          ? result.reason
+          : `Could not prepare ${stock.ticker}.`;
       return NextResponse.json({ error: reason }, { status: response.status });
     }
 
