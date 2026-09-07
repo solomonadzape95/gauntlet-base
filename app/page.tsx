@@ -10,7 +10,7 @@ export default function Home() {
       <section className="hero shell">
         <div className="hero-copy">
           <p className="eyebrow hazard">FANTASY PICKS · REAL OWNERSHIP · BASE</p>
-          <h1><span>PICK THREE.</span><span>OWN A <em>LITTLE.</em></span><span>BEAT EVERYONE.</span></h1>
+          <h1><span>BUILD A LINEUP.</span><span>OWN A <em>LITTLE.</em></span><span>BEAT EVERYONE.</span></h1>
           <p className="hero-lede">Build a $100,000 fantasy portfolio for free. Then own a miniature real version using Coinbase tokenized stocks.</p>
           <div className="hero-actions">
             <Link className="primary-action" href="/draft">ENTER THE GAUNTLET <ArrowRight size={18} /></Link>
@@ -18,7 +18,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="hero-deck" aria-label="Example three-stock draft">
+        <div className="hero-deck" aria-label="Example stock lineup">
           {STOCKS.slice(0, 3).map((stock, index) => (
             <div className={`deck-card deck-${index + 1}`} key={stock.ticker}>
               <StockCard stock={stock} index={index + 1} />
@@ -41,7 +41,7 @@ export default function Home() {
         <div className="section-kicker"><Swords size={18} /><span>THE FORMAT</span></div>
         <div className="how-heading"><h2>FROM FANTASY<br />TO <em>OWNERSHIP.</em></h2><p>No jargon-heavy terminal. No need to risk money before you understand the game. Choose freely, then decide whether to own your picks.</p></div>
         <div className="how-grid">
-          <Step number="01" title="PICK" copy="Draft exactly three companies with $100,000 in virtual funds." />
+          <Step number="01" title="PICK" copy="Draft three to five companies with $100,000 in virtual funds." />
           <Step number="02" title="OWN" copy="Buy a small real version. Every tokenized stock goes to your wallet." />
           <Step number="03" title="BATTLE" copy="Challenge a friend. Percentage returns decide the winner—not money spent." />
         </div>

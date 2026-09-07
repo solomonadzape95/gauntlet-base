@@ -6,9 +6,9 @@
 **V1 game mode:** Draft2Own  
 **Primary objective:** Turn fantasy-stock play into measurable first-time usage of Coinbase tokenized stocks on Base.
 
-> **Pick three stocks. Own a little. Battle your friends.**
+> **Build a stock lineup. Own a little. Battle your friends.**
 
-Gauntlet gives each player $100,000 in virtual funds, lets them draft three companies, and then offers a guided way to buy a small real version of that draft using Coinbase tokenized stocks. The player keeps the real stocks in their own wallet and uses the portfolio as their team in a social Stock Battle.
+Gauntlet gives each player $100,000 in virtual funds, lets them draft three to five companies, and then offers a guided way to buy a small real version of that draft using Coinbase tokenized stocks. The player keeps the real stocks in their own wallet and uses the portfolio as their team in a social Stock Battle.
 
 This document is the canonical plan for the Base Builder Quest version of Gauntlet. The previous football survival-pool application and plan are preserved in [`../gauntlet-legacy-football`](../gauntlet-legacy-football).
 
@@ -50,8 +50,8 @@ The most important number is **new B20-owning wallets** [wallets that held none 
 
 ### V1 must do
 
-1. Let anyone create a three-stock fantasy draft without connecting a wallet.
-2. Display a $100,000 virtual portfolio divided equally across the three picks.
+1. Let anyone create a three-to-five-stock fantasy draft without connecting a wallet.
+2. Display a $100,000 virtual portfolio divided equally across all picks.
 3. Explain the difference between virtual selections and real ownership.
 4. Restrict real purchase functionality to eligible non-US adults.
 5. Connect a Base-compatible wallet.
@@ -86,7 +86,7 @@ These are deliberate exclusions, not missing features.
 
 The landing page immediately explains the loop:
 
-> **Pick three. Own a little. Battle your friends.**  
+> **Build a lineup. Own a little. Battle your friends.**
 > Draft a $100,000 fantasy portfolio, then own a miniature real version on Base from a few dollars.
 
 Primary action: `ENTER THE GAUNTLET`  
@@ -94,23 +94,19 @@ Secondary action: `WATCH A BATTLE`
 
 No wallet is requested here.
 
-### 3.2 Draft three companies
+### 3.2 Build a three-to-five-stock lineup
 
-The player selects exactly three stocks from an allowlist [a deliberately approved list] of official Coinbase tokenized stocks.
+The player selects between three and five stocks from an allowlist [a deliberately approved list] of official Coinbase tokenized stocks.
 
 For V1, all picks have equal weight:
 
-| Pick | Virtual allocation |
-|---|---:|
-| Stock 1 | $33,333 |
-| Stock 2 | $33,333 |
-| Stock 3 | $33,334 |
+The $100,000 virtual balance is divided as evenly as possible across however many stocks the player selects. Remainder dollars are assigned deterministically so the displayed total is always exactly $100,000.
 
 Stock cards should be neutral and consistent. They may show company name, ticker, verified status, current price, and recent price movement, but must not label anything as `recommended`, `safe`, or `best`.
 
 ### 3.3 Review the fantasy draft
 
-The review screen shows three large player-card-style stock cards and the combined virtual portfolio.
+The review screen shows the selected player-card-style stocks and the combined virtual portfolio.
 
 Primary action: `LOCK MY DRAFT`  
 Next prompt: `MAKE THIS DRAFT REAL`
@@ -125,7 +121,7 @@ Offer three preset total amounts:
 - $10
 - $25
 
-The smallest option remains provisional until a mainnet test confirms that three small purchases receive valid quotes and sensible output after fees and price impact.
+The smallest option remains provisional until a mainnet test confirms that three-to-five small purchases receive valid quotes and sensible output after fees and price impact.
 
 Example for a $5 draft:
 
@@ -175,8 +171,8 @@ Use a recoverable sequence:
 2. Approve the exact total USDC amount
 3. Buy stock one
 4. Buy stock two
-5. Buy stock three
-6. Verify balances
+5. Continue through each remaining selected stock
+6. Verify every selected balance
 7. Activate owned draft
 ```
 
@@ -200,12 +196,12 @@ Gauntlet never receives or controls the assets. This is **non-custodial** [the u
 
 ### 3.8 Ownership reveal
 
-After all three balances are verified, the fantasy cards transition from `VIRTUAL` to `OWNED`.
+After every selected balance is verified, the fantasy cards transition from `VIRTUAL` to `OWNED`.
 
 The reveal should say:
 
 > **YOUR DRAFT IS NOW REAL**  
-> Three Coinbase tokenized stocks. Held in your wallet. Ready for battle.
+> Your Coinbase tokenized-stock lineup. Held in your wallet. Ready for battle.
 
 Each stock links to its confirmed BaseScan transaction [a public record of activity on Base].
 
@@ -240,7 +236,7 @@ stock return = (current total-return price / starting total-return price) - 1
 For the equal-weight portfolio:
 
 ```text
-portfolio return = (stock 1 return + stock 2 return + stock 3 return) / 3
+portfolio return = sum of selected stock returns / number of selected stocks
 ```
 
 A **total-return price** [a price adjusted to account for dividends and stock splits] should come from the official Chainlink feed associated with the B20 token.
@@ -269,7 +265,7 @@ The product's retention loop [the reason a player comes back] is the rematch, no
 | Route | Screen | Purpose | Priority |
 |---|---|---|---|
 | `/` | Landing | Explain the loop and start a draft | P0 |
-| `/draft` | Stock draft | Select exactly three stocks | P0 |
+| `/draft` | Stock draft | Select three to five stocks | P0 |
 | `/draft/[id]` | Draft review | Review virtual allocation and start ownership | P0 |
 | `/draft/[id]/own` | Own My Draft | Eligibility, amount, wallet, quotes, purchases | P0 |
 | `/draft/[id]/reveal` | Ownership reveal | Verify balances and create the emotional payoff | P0 |
@@ -581,9 +577,9 @@ This section explains how information moves through the system.
 ```text
 Player opens draft
   -> app loads verified stock configuration
-  -> player selects three
+  -> player selects three to five
   -> browser sends selections to server
-  -> server validates all three against the allowlist
+  -> server validates every pick against the allowlist
   -> database creates locked draft and picks
   -> browser receives draft ID
   -> analytics records draft completion
@@ -598,7 +594,7 @@ Player chooses $5 / $10 / $25
   -> browser requests a quote for the draft
   -> server checks eligibility result and draft ownership
   -> server divides USDC according to draft weights
-  -> server requests three indicative 0x prices
+  -> server requests one indicative price per selected stock
   -> server rejects missing or unreasonable routes
   -> browser displays estimated B20 outputs, fees, and expiry
   -> player reviews before signing anything
@@ -617,7 +613,7 @@ Player confirms Own My Draft
   -> Base confirms transaction
   -> app reads B20 balance
   -> server records confirmed transaction
-  -> repeat with fresh quotes for stock two and stock three
+  -> repeat with a fresh quote for each remaining stock
 ```
 
 A quote is refreshed immediately before each purchase because market prices and available liquidity can change.
@@ -625,8 +621,8 @@ A quote is refreshed immediately before each purchase because market prices and 
 ### Cycle D: Ownership verification
 
 ```text
-All three purchases report confirmed
-  -> app reads all three B20 balances from Base
+All selected purchases report confirmed
+  -> app reads every selected B20 balance from Base
   -> each balance must be greater than its pre-purchase balance
   -> server independently checks transaction receipts
   -> draft status changes to owned
@@ -830,11 +826,11 @@ This cycle is part of the MVP. Real wallet users abandon products that cannot ex
 
 ### A. Full Gauntlet Draft2Own
 
-Three virtual stocks become three real B20 holdings through one guided flow.
+Three to five virtual stocks become real B20 holdings through one guided flow.
 
 ### B. Anchor Stock
 
-The player drafts three virtual stocks but purchases one chosen **Anchor Stock** [the single pick they most strongly choose to own]. That verified stock activates the owned draft.
+The player drafts three to five virtual stocks but purchases one chosen **Anchor Stock** [the single pick they most strongly choose to own]. That verified stock activates the owned draft.
 
 ### C. Bring Your Own B20
 

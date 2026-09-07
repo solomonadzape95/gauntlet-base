@@ -106,7 +106,9 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .stock-card-top { position: relative; z-index: 1; display: flex; justify-content: space-between; }
 .stock-index { color: var(--faint); font: 400 12px/1 var(--font-utility); letter-spacing: .15em; }
 .selection-mark { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--edge); color: var(--stock-tone); }
-.stock-glyph { position: absolute; top: 32px; right: -12px; color: color-mix(in srgb,var(--stock-tone) 27%,transparent); font: 500 210px/.8 var(--font-utility); letter-spacing: -.15em; }
+.stock-logo { position: absolute; z-index: 0; top: 38px; right: -20px; width: 78%; aspect-ratio: 1; display: grid; place-items: center; color: var(--stock-tone); opacity: .3; transform: rotate(-5deg); mask-image: radial-gradient(circle,#000 1.2px,transparent 1.55px); mask-size: 4px 4px; }
+.stock-logo svg { width: 100%; height: 100%; fill: currentColor; filter: drop-shadow(0 0 18px color-mix(in srgb,var(--stock-tone) 55%,transparent)); }
+.sandisk-mark { font: 700 clamp(35px,4vw,58px)/1 var(--font-body); letter-spacing: -.08em; transform: rotate(-10deg); }
 .stock-card h3 { position: relative; margin: 7px 0 0; font-family: var(--font-display); font-size: clamp(30px,3vw,44px); line-height: .9; text-transform: uppercase; }
 .ticker { position: relative; margin: 12px 0 0; color: var(--stock-tone); font: 500 15px/1 var(--font-utility); letter-spacing: .11em; }
 
@@ -143,8 +145,9 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .split-heading { display: grid; grid-template-columns: 1fr minmax(300px,430px); align-items: end; gap: 60px; }
 .heading-aside { color: var(--dim); font-size: 17px; line-height: 1.6; }
 .heading-aside > p { margin: 0 0 28px; }
-.selection-count { padding-top: 20px; border-top: 1px solid var(--edge); font: 400 12px/1 var(--font-utility); color: var(--faint); letter-spacing: .1em; }
+.selection-count { display: flex; align-items: baseline; gap: 9px; padding-top: 20px; border-top: 1px solid var(--edge); font: 400 12px/1 var(--font-utility); color: var(--faint); letter-spacing: .1em; }
 .selection-count span { color: var(--hazard); font-size: 34px; }
+.selection-count small { margin-left: auto; color: var(--faint); font: 400 9px/1 var(--font-utility); letter-spacing: .1em; }
 .stock-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
 .stock-grid .stock-card { min-height: 330px; }
 .stock-grid .stock-card h3 { font-size: clamp(26px,2.4vw,38px); }
@@ -204,7 +207,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-complete strong, .purchase-complete span { display: block; }
 .purchase-complete strong { font: 500 11px/1 var(--font-utility); letter-spacing: .1em; }
 .purchase-complete span { margin-top: 5px; color: var(--dim); font-size: 11px; }
-.receipt-list { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 9px; }
+.receipt-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(90px,1fr)); gap: 6px; margin-top: 9px; }
 .receipt-list a { padding: 9px 5px; border: 1px solid var(--edge); color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .06em; text-align: center; }
 .receipt-list a:hover { border-color: var(--signal); color: var(--signal); }
 .spin { animation: spin .8s linear infinite; }
@@ -264,7 +267,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
   .hero-deck { min-height: 410px; }
   .deck-card { width: 62%; }
   .deck-card .stock-card { min-height: 330px; padding: 15px; }
-  .stock-glyph { font-size: 145px; }
+  .stock-logo { width: 72%; }
   .stock-card h3 { font-size: 25px; }
   .owned-stamp { bottom: 10px; }
   .proof-grid { grid-template-columns: 1fr 1fr; }

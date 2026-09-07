@@ -17,7 +17,7 @@ export default function DemoBattlePage() {
       <div className="battle-status"><span><Radio size={14} /> LIVE BATTLE</span><span><Clock3 size={14} /> 04:38:12 REMAINING</span></div>
       <header className="battle-heading">
         <p className="eyebrow hazard">OWNED BATTLE · MATCH 0007</p>
-        <h1>YOUR THREE.<br /><em>HEAD TO HEAD.</em></h1>
+        <h1>YOUR LINEUP.<br /><em>HEAD TO HEAD.</em></h1>
       </header>
 
       <section className="versus-grid">

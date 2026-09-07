@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Connect a valid wallet before requesting prices." }, { status: 400 });
   }
 
-  if (uniqueTickers.length !== 3 || uniqueTickers.some((ticker) => typeof ticker !== "string" || !getStock(ticker))) {
-    return NextResponse.json({ error: "A quote requires exactly three supported stocks." }, { status: 400 });
+  if (uniqueTickers.length < 3 || uniqueTickers.length > 5 || uniqueTickers.some((ticker) => typeof ticker !== "string" || !getStock(ticker))) {
+    return NextResponse.json({ error: "A quote requires three to five supported stocks." }, { status: 400 });
   }
 
   const apiKey = process.env.ZEROX_API_KEY;

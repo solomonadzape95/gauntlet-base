@@ -1,5 +1,6 @@
 import { Check, Plus } from "lucide-react";
 
+import { StockLogo } from "@/components/stock-logo";
 import type { Stock } from "@/lib/stocks";
 
 export function StockCard({
@@ -30,8 +31,8 @@ export function StockCard({
           {selected ? <Check size={15} /> : <Plus size={15} />}
         </span>
       </div>
-      <div className="stock-glyph" aria-hidden>
-        {stock.company.slice(0, 1)}
+      <div className="stock-logo">
+        <StockLogo ticker={stock.ticker} />
       </div>
       <div>
         <p className="eyebrow">{stock.sector}</p>

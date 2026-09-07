@@ -1,6 +1,6 @@
 # Gauntlet
 
-**Pick three stocks. Own a little. Battle your friends.**
+**Build a stock lineup. Own a little. Battle your friends.**
 
 Gauntlet is a fantasy-stock game that turns a free virtual draft into a small real portfolio of Coinbase tokenized stocks on Base. The first game mode is **Draft2Own**.
 

@@ -12,6 +12,8 @@ import { WalletStatus } from "@/components/wallet-status";
 import { B20_DECIMALS, DEFAULT_DRAFT, getStock, STOCKS } from "@/lib/stocks";
 
 type Step = "select" | "review" | "own";
+const MIN_PICKS = 3;
+const MAX_PICKS = 5;
 
 type PricePreview = {
   ticker: string;
@@ -64,11 +66,18 @@ export function DraftBuilder() {
     [selected],
   );
   const realSplit = useMemo(() => {
+    if (selected.length === 0) return [];
     const totalCents = realAmount * 100;
-    const equalCents = Math.floor(totalCents / 3);
-    const remainder = totalCents - equalCents * 3;
-    return [0, 1, 2].map((index) => (equalCents + (index < remainder ? 1 : 0)) / 100);
-  }, [realAmount]);
+    const equalCents = Math.floor(totalCents / selected.length);
+    const remainder = totalCents - equalCents * selected.length;
+    return selected.map((_, index) => (equalCents + (index < remainder ? 1 : 0)) / 100);
+  }, [realAmount, selected]);
+  const virtualSplit = useMemo(() => {
+    if (selected.length === 0) return [];
+    const equalDollars = Math.floor(100_000 / selected.length);
+    const remainder = 100_000 - equalDollars * selected.length;
+    return selected.map((_, index) => equalDollars + (index < remainder ? 1 : 0));
+  }, [selected]);
 
   const resetQuote = () => {
     setQuoteState("idle");
@@ -86,7 +95,7 @@ export function DraftBuilder() {
     setSelected((current) =>
       current.includes(ticker)
         ? current.filter((item) => item !== ticker)
-        : current.length < 3
+        : current.length < MAX_PICKS
           ? [...current, ticker]
           : current,
     );
@@ -206,11 +215,11 @@ export function DraftBuilder() {
             <div className="page-heading split-heading">
               <div>
                 <p className="eyebrow hazard">ROUND 01 · FREE TO PLAY</p>
-                <h1>BUILD YOUR<br /><em>THREE.</em></h1>
+                <h1>BUILD YOUR<br /><em>LINEUP.</em></h1>
               </div>
               <div className="heading-aside">
-                <p>Choose exactly three companies. Your virtual $100,000 is divided equally between them.</p>
-                <div className="selection-count"><span>{selected.length}</span> / 3 SELECTED</div>
+                <p>Choose three to five companies. Your virtual $100,000 is divided equally across your lineup.</p>
+                <div className="selection-count"><span>{selected.length}</span> PICKED <small>3 MIN · 5 MAX</small></div>
               </div>
             </div>
 
@@ -221,7 +230,7 @@ export function DraftBuilder() {
                   stock={stock}
                   index={index + 1}
                   selected={selected.includes(stock.ticker)}
-                  disabled={selected.length === 3 && !selected.includes(stock.ticker)}
+                  disabled={selected.length === MAX_PICKS && !selected.includes(stock.ticker)}
                   onSelect={() => toggle(stock.ticker)}
                 />
               ))}
@@ -232,7 +241,7 @@ export function DraftBuilder() {
                 <p className="eyebrow">YOUR DRAFT</p>
                 <strong>{selected.length ? selected.join(" · ") : "NO PICKS YET"}</strong>
               </div>
-              <button className="primary-action" disabled={selected.length !== 3} onClick={() => setStep("review")}>
+              <button className="primary-action" disabled={selected.length < MIN_PICKS} onClick={() => setStep("review")}>
                 LOCK MY DRAFT <ArrowRight size={18} />
               </button>
             </div>
@@ -258,8 +267,8 @@ export function DraftBuilder() {
                   <div key={stock.ticker} className="allocation-row">
                     <span className="allocation-rank">0{index + 1}</span>
                     <span className="allocation-company">{stock.company}<small>{stock.ticker}</small></span>
-                    <span className="allocation-bar"><i style={{ width: index === 2 ? "33.34%" : "33.33%", background: stock.tone }} /></span>
-                    <strong>{money.format(index === 2 ? 33334 : 33333)}</strong>
+                    <span className="allocation-bar"><i style={{ width: `${100 / picks.length}%`, background: stock.tone }} /></span>
+                    <strong>{money.format(virtualSplit[index])}</strong>
                   </div>
                 ))}
               </div>
@@ -345,17 +354,17 @@ export function DraftBuilder() {
                   {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && approved && purchaseState !== "complete" && (
                     <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying"} onClick={buyDraft}>
                       {purchaseState === "buying"
-                        ? `CONFIRMING STOCK ${purchaseProgress + 1} OF 3…`
+                        ? `CONFIRMING STOCK ${purchaseProgress + 1} OF ${picks.length}…`
                         : receipts.length > 0
-                          ? `RESUME WITH STOCK ${receipts.length + 1} OF 3`
-                          : "BUY MY THREE STOCKS"}
+                          ? `RESUME WITH STOCK ${receipts.length + 1} OF ${picks.length}`
+                          : `BUY MY ${picks.length} STOCKS`}
                     </button>
                   )}
                   {purchaseState === "error" && <p className="purchase-message error">{purchaseError}</p>}
                   {purchaseState === "complete" && (
                     <div className="purchase-complete">
                       <CheckCircle2 size={19} />
-                      <div><strong>DRAFT OWNED</strong><span>Three purchases confirmed on Base.</span></div>
+                      <div><strong>DRAFT OWNED</strong><span>{picks.length} purchases confirmed on Base.</span></div>
                     </div>
                   )}
                   {receipts.length > 0 && (

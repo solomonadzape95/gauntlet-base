@@ -3,7 +3,7 @@ import { ExternalLink, RadioTower } from "lucide-react";
 const metrics = [
   ["NEW B20 WALLETS", "0", "Awaiting mainnet launch"],
   ["CONFIRMED PURCHASES", "0", "Only verified transactions count"],
-  ["OWNED DRAFTS", "0", "All three balances verified"],
+  ["OWNED DRAFTS", "0", "Every selected balance verified"],
   ["OWNED BATTLES", "0", "Both players verified"],
 ];
 
