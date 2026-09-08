@@ -262,15 +262,6 @@ export function DraftBuilder() {
               ))}
             </div>
 
-            <div className="sticky-action">
-              <div>
-                <p className="eyebrow">YOUR DRAFT</p>
-                <strong>{selected.length ? selected.join(" · ") : "NO PICKS YET"}</strong>
-              </div>
-              <button className="primary-action" disabled={selected.length < MIN_PICKS} onClick={lockDraft}>
-                LOCK MY DRAFT <ArrowRight size={18} />
-              </button>
-            </div>
           </motion.section>
         )}
 
@@ -425,6 +416,18 @@ export function DraftBuilder() {
           </motion.section>
         )}
       </AnimatePresence>
+
+      {step === "select" && (
+        <div className="sticky-action">
+          <div>
+            <p className="eyebrow">YOUR DRAFT</p>
+            <strong>{selected.length ? selected.join(" · ") : "NO PICKS YET"}</strong>
+          </div>
+          <button className="primary-action" disabled={selected.length < MIN_PICKS} onClick={lockDraft}>
+            LOCK MY DRAFT <ArrowRight size={18} />
+          </button>
+        </div>
+      )}
 
       {selected.length === 0 && step === "select" && (
         <button className="demo-picks" onClick={() => setSelected(DEFAULT_DRAFT)}>USE DEMO PICKS</button>

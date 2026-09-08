@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { WagmiProvider } from "wagmi";
 
+import { GauntletAuthProvider } from "@/components/gauntlet-auth";
 import { wagmiConfig } from "@/lib/wagmi";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -11,7 +12,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <WagmiProvider config={wagmiConfig} reconnectOnMount>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <GauntletAuthProvider>{children}</GauntletAuthProvider>
+      </QueryClientProvider>
     </WagmiProvider>
   );
 }
