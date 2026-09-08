@@ -71,6 +71,8 @@ function Battle() {
     const current = currentPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
     return [pick.ticker, priceReturn(opening, current)] as const;
   });
+  const strongestPick = holdings.reduce((best, item) => item[1] > best[1] ? item : best, holdings[0] ?? ["—", 0] as const);
+  const canOwnBattleDraft = Boolean(draft && activeSession?.playerDraftId === draft.id);
 
   async function enterBattle() {
     setLoadingMarket(true);
@@ -133,6 +135,10 @@ function Battle() {
             })} leading={!leading} />
           </section>
           <section className="battle-proof"><ShieldCheck size={20} /><div><strong>CHAINLINK TOTAL-RETURN SCORE</strong><p>This battle uses virtual funds and official Base feed addresses. Owning stocks is optional and never changes the score.{marketError ? ` ${marketError}` : ""}</p></div></section>
+          <section className="battle-conversion dashboard-panel">
+            <div><p className="eyebrow hazard">YOUR LINEUP IN PRACTICE</p><h2>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}% SO FAR.</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
+            <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
+          </section>
           <button className="secondary-action battle-share" onClick={() => void copyChallenge()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
         </>
       )}

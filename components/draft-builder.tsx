@@ -11,7 +11,7 @@ import { base } from "wagmi/chains";
 import { StockCard } from "@/components/stock-card";
 import { WalletStatus } from "@/components/wallet-status";
 import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "@/lib/allocations";
-import { markPracticeDraftOwned, savePracticeDraft } from "@/lib/practice-game";
+import { markPracticeDraftOwned, readPracticeDrafts, savePracticeDraft } from "@/lib/practice-game";
 import {
   attachPurchaseWallet,
   confirmedPurchaseCount,
@@ -58,7 +58,7 @@ const money = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-export function DraftBuilder() {
+export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
   const router = useRouter();
   const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient({ chainId: base.id });
@@ -85,7 +85,19 @@ export function DraftBuilder() {
   const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
 
   useEffect(() => {
-    const saved = readPurchaseSession();
+    let saved = readPurchaseSession();
+    if (ownDraftId) {
+      const target = readPracticeDrafts().find((draft) => draft.id === ownDraftId);
+      const existingTransaction = saved?.rows.some((row) => row.txHash || row.status !== "ready");
+      if (target && (!saved || (saved.draftId !== target.id && !existingTransaction))) {
+        const allocationCents = allocateByWeight(target.picks.map((pick) => pick.virtualAmount), 500);
+        saved = savePurchaseSession(createPurchaseSession({
+          draftId: target.id,
+          realAmount: 5,
+          picks: target.picks.map((pick, index) => ({ ...pick, allocationCents: allocationCents[index] })),
+        }));
+      }
+    }
     if (!saved) return;
 
     const timer = window.setTimeout(() => {
@@ -98,7 +110,7 @@ export function DraftBuilder() {
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [ownDraftId]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
