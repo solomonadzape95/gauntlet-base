@@ -58,8 +58,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A quote requires three to five unique supported stocks." }, { status: 400 });
   }
 
-  if (virtualTotal !== VIRTUAL_BUDGET) {
-    return NextResponse.json({ error: "Allocate the full virtual $1,000 before requesting prices." }, { status: 400 });
+  if (virtualTotal > VIRTUAL_BUDGET) {
+    return NextResponse.json({ error: "This team exceeds the 1,000-credit Squad Budget." }, { status: 400 });
   }
 
   const apiKey = process.env.ZEROX_API_KEY;

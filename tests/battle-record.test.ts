@@ -11,7 +11,8 @@ const lineup = [
 
 test("normalizes only complete supported lineups", () => {
   assert.deepEqual(normalizeLineup(lineup), lineup);
-  assert.equal(normalizeLineup(lineup.map((pick) => ({ ...pick, virtualAmount: 1 }))), null);
+  assert.deepEqual(normalizeLineup(lineup.map((pick) => ({ ...pick, virtualAmount: 1 }))), lineup.map((pick) => ({ ...pick, virtualAmount: 1 })));
+  assert.equal(normalizeLineup(lineup.map((pick) => ({ ...pick, virtualAmount: 400 }))), null);
   assert.equal(normalizeLineup([lineup[0], lineup[0], lineup[2]]), null);
   assert.equal(normalizeLineup([{ ...lineup[0], ticker: "FAKEc" }, lineup[1], lineup[2]]), null);
 });

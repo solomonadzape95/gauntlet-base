@@ -15,15 +15,14 @@ export function priceReturn(start: number, current: number) {
   return ((current / start) - 1) * 100;
 }
 
-export function scoreLineup(picks: ScoredPick[], start: PricePoint[], current: PricePoint[]) {
-  const total = picks.reduce((sum, pick) => sum + pick.virtualAmount, 0);
-  if (total <= 0) return 0;
+export function scoreLineup(picks: ScoredPick[], start: PricePoint[], current: PricePoint[], budget = 1_000) {
+  if (budget <= 0) return 0;
 
   return picks.reduce((score, pick) => {
     const opening = start.find((point) => point.ticker === pick.ticker);
     const latest = current.find((point) => point.ticker === pick.ticker);
     if (!opening || !latest) return score;
-    return score + priceReturn(opening.price, latest.price) * (pick.virtualAmount / total);
+    return score + priceReturn(opening.price, latest.price) * (pick.virtualAmount / budget);
   }, 0);
 }
 

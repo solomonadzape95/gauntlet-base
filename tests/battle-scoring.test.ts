@@ -18,6 +18,11 @@ test("scoreLineup weights returns by virtual allocation", () => {
   assert.ok(Math.abs(scoreLineup(picks, start, current) - 2.5) < 1e-9);
 });
 
+test("unspent squad budget remains cash and contributes zero return", () => {
+  const picks = [{ ticker: "AAPLc", virtualAmount: 500 }];
+  assert.ok(Math.abs(scoreLineup(picks, [point("AAPLc", 100)], [point("AAPLc", 110)]) - 5) < 1e-9);
+});
+
 test("hasUsablePrices rejects missing or stale feeds", () => {
   assert.equal(hasUsablePrices(["AAPLc"], [point("AAPLc", 100)]), true);
   assert.equal(hasUsablePrices(["AAPLc"], [point("AAPLc", 100, false)]), false);

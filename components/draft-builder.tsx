@@ -11,8 +11,9 @@ import { base } from "wagmi/chains";
 import { StockCard } from "@/components/stock-card";
 import { WalletStatus } from "@/components/wallet-status";
 import { useGauntletAuth } from "@/components/gauntlet-auth";
-import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "@/lib/allocations";
+import { allocateByWeight, VIRTUAL_BUDGET } from "@/lib/allocations";
 import { markPracticeDraftOwned, readPracticeDrafts, savePracticeDraft } from "@/lib/practice-game";
+import { createDraftMarket, type DraftMarketStock } from "@/lib/fantasy-market";
 import {
   attachPurchaseWallet,
   clearPurchaseSession,
@@ -56,12 +57,6 @@ type LocationCheck = {
 
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
 
-const money = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
 export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; returnTo?: string }) {
   const router = useRouter();
   const { session } = useGauntletAuth();
@@ -89,6 +84,21 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
   const [purchaseError, setPurchaseError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
+  const [draftMarket, setDraftMarket] = useState<DraftMarketStock[]>([]);
+  const [marketState, setMarketState] = useState<"loading" | "live" | "held">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/market", { cache: "no-store" }).then(async (response) => {
+      const result = await response.json() as { prices?: Parameters<typeof createDraftMarket>[0] };
+      if (!response.ok || !result.prices) throw new Error();
+      if (!cancelled) {
+        setDraftMarket(createDraftMarket(result.prices));
+        setMarketState("live");
+      }
+    }).catch(() => { if (!cancelled) setMarketState("held"); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!ownDraftId) return;
@@ -160,7 +170,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     [selected, virtualAllocations],
   );
   const allocationRemaining = VIRTUAL_BUDGET - allocationTotal;
-  const allocationsValid = allocationRemaining === 0
+  const allocationsValid = selected.length >= MIN_PICKS && selected.length <= MAX_PICKS && allocationRemaining >= 0
     && selected.every((ticker) => (virtualAllocations[ticker] ?? 0) > 0);
   const confirmedCount = confirmedPurchaseCount(purchaseSession);
   const purchaseStarted = Boolean(purchaseSession?.rows.some((row) => row.status !== "ready" || row.txHash));
@@ -182,37 +192,31 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
 
   const toggle = (ticker: string) => {
     resetQuote();
-    setSelected((current) =>
-      current.includes(ticker)
-        ? current.filter((item) => item !== ticker)
-        : current.length < MAX_PICKS
-          ? [...current, ticker]
-          : current,
-    );
+    setSelected((current) => {
+      if (current.includes(ticker)) return current.filter((item) => item !== ticker);
+      const cost = draftMarket.find((item) => item.ticker === ticker)?.draftCost ?? 0;
+      const spent = current.reduce((sum, item) => sum + (draftMarket.find((quote) => quote.ticker === item)?.draftCost ?? 0), 0);
+      return current.length < MAX_PICKS && cost > 0 && spent + cost <= VIRTUAL_BUDGET ? [...current, ticker] : current;
+    });
   };
 
   const lockDraft = () => {
-    setVirtualAllocations(makeEvenAllocations(selected));
+    setVirtualAllocations(Object.fromEntries(selected.map((ticker) => [ticker, draftMarket.find((item) => item.ticker === ticker)?.draftCost ?? 0])));
     setStep("review");
-  };
-
-  const updateAllocation = (ticker: string, value: string) => {
-    resetQuote();
-    const amount = Math.max(0, Math.min(VIRTUAL_BUDGET, Math.round(Number(value) || 0)));
-    setVirtualAllocations((current) => ({ ...current, [ticker]: amount }));
   };
 
   const playForFree = async () => {
     if (!allocationsValid) return;
     setTeamError("");
     const picks = selected.map((ticker) => ({ ticker, virtualAmount: virtualAllocations[ticker] }));
-    savePracticeDraft(picks);
-    const saved = await saveActiveTeam(picks, session);
-    if (session && !saved) {
-      setTeamError("Your team is safe in this browser, but account sync failed. Try saving again before entering a battle.");
-      return;
+    try {
+      const saved = await saveActiveTeam(picks, session);
+      savePracticeDraft(saved.picks);
+      if (returnTo) router.push(returnTo);
+      else window.location.reload();
+    } catch (cause) {
+      setTeamError(cause instanceof Error ? cause.message : "Could not save this team.");
     }
-    router.push(returnTo ?? (isConnected ? "/me" : "/battle/demo"));
   };
 
   const enterOwnership = async () => {
@@ -222,12 +226,12 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
       ticker,
       virtualAmount: virtualAllocations[ticker],
     }));
-    const draft = savePracticeDraft(picks);
-    const saved = await saveActiveTeam(picks, session);
-    if (session && !saved) {
-      setTeamError("Your team is safe in this browser, but account sync failed. Try saving again before continuing.");
+    let saved;
+    try { saved = await saveActiveTeam(picks, session); } catch (cause) {
+      setTeamError(cause instanceof Error ? cause.message : "Could not save this team.");
       return;
     }
+    const draft = savePracticeDraft(saved.picks);
     const allocationCents = allocateByWeight(
       selected.map((ticker) => virtualAllocations[ticker]),
       realAmount * 100,
@@ -236,9 +240,9 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
       draftId: draft.id,
       walletAddress: address,
       realAmount,
-      picks: selected.map((ticker, index) => ({
-        ticker,
-        virtualAmount: virtualAllocations[ticker],
+      picks: saved.picks.map((pick, index) => ({
+        ticker: pick.ticker,
+        virtualAmount: pick.virtualAmount,
         allocationCents: allocationCents[index],
       })),
     }));
@@ -453,7 +457,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                 <h1>DRAFT A <em>PORTFOLIO.</em></h1>
               </div>
               <div className="heading-aside">
-                <p>Choose three to five companies. You will decide how to divide your virtual $1,000 next.</p>
+                <p>Choose three to five companies within your 1,000-credit Squad Budget. Draft costs follow current onchain reference prices.</p>
                 <div className="selection-count"><span>{selected.length}</span> PICKED <small>3 MIN · 5 MAX</small></div>
               </div>
             </div>
@@ -464,11 +468,13 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   key={stock.ticker}
                   stock={stock}
                   selected={selected.includes(stock.ticker)}
-                  disabled={selected.length === MAX_PICKS && !selected.includes(stock.ticker)}
+                  draftCost={draftMarket.find((item) => item.ticker === stock.ticker)?.draftCost}
+                  disabled={marketState !== "live" || (!selected.includes(stock.ticker) && (selected.length === MAX_PICKS || selected.reduce((sum, item) => sum + (draftMarket.find((quote) => quote.ticker === item)?.draftCost ?? 0), 0) + (draftMarket.find((quote) => quote.ticker === stock.ticker)?.draftCost ?? VIRTUAL_BUDGET + 1) > VIRTUAL_BUDGET))}
                   onSelect={() => toggle(stock.ticker)}
                 />
               ))}
             </div>
+            {marketState !== "live" && <p className="data-notice">{marketState === "loading" ? "LOADING ONCHAIN DRAFT COSTS…" : "TRANSFER MARKET HELD · Fresh Chainlink prices are required to build a team."}</p>}
 
           </motion.section>
         )}
@@ -477,22 +483,17 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
           <motion.section key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
             <div className="page-heading">
               <p className="eyebrow hazard">ROUND 02 · VIRTUAL PORTFOLIO</p>
-              <h1>ALLOCATE YOUR <em>$1K.</em></h1>
-              <p className="lede">Set the virtual amount behind each pick. No money moves here—this is your practice portfolio.</p>
+              <h1>CHECK YOUR <em>SQUAD.</em></h1>
+              <p className="lede">Each stock costs its current draft price. Your unused credits stay in the Bank and earn no return.</p>
             </div>
 
             <div className="portfolio-panel">
               <div className="portfolio-total">
-                <span className="eyebrow">VIRTUAL FUNDS</span>
-                <strong>{money.format(VIRTUAL_BUDGET)}</strong>
+                <span className="eyebrow">BANK AFTER DRAFT</span>
+                <strong>{allocationRemaining} CR</strong>
                 <span className="status-chip"><span /> VIRTUAL</span>
-                <button className="even-split" onClick={() => setVirtualAllocations(makeEvenAllocations(selected))}>EVEN SPLIT</button>
                 <p className={`allocation-balance ${allocationRemaining < 0 ? "over" : ""}`}>
-                  {allocationRemaining === 0
-                    ? "ALL FUNDS ALLOCATED"
-                    : allocationRemaining > 0
-                      ? `${money.format(allocationRemaining)} LEFT TO ALLOCATE`
-                      : `${money.format(Math.abs(allocationRemaining))} OVER BUDGET`}
+                  {allocationRemaining >= 0 ? `${allocationTotal} OF ${VIRTUAL_BUDGET} CREDITS SPENT` : `${Math.abs(allocationRemaining)} CREDITS OVER BUDGET`}
                 </p>
               </div>
               <div className="allocation-list">
@@ -501,18 +502,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     <span className="allocation-rank">0{index + 1}</span>
                     <span className="allocation-company">{stock.company}<small>{stock.ticker}</small></span>
                     <span className="allocation-bar"><i style={{ width: `${Math.min(100, (virtualAllocations[stock.ticker] ?? 0) / 10)}%`, background: stock.logoColor }} /></span>
-                    <label className="allocation-input">
-                      <span>$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max={VIRTUAL_BUDGET}
-                        step="10"
-                        value={virtualAllocations[stock.ticker] ?? 0}
-                        onChange={(event) => updateAllocation(stock.ticker, event.target.value)}
-                        aria-label={`${stock.company} virtual allocation in dollars`}
-                      />
-                    </label>
+                    <strong className="allocation-cost">{virtualAllocations[stock.ticker] ?? 0} CR</strong>
                   </div>
                 ))}
               </div>
@@ -672,7 +662,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
             <strong>{selected.length ? selected.join(" · ") : "NO PICKS YET"}</strong>
           </div>
           <button className="primary-action" disabled={selected.length < MIN_PICKS} onClick={lockDraft}>
-            LOCK MY DRAFT <ArrowRight size={18} />
+            REVIEW SQUAD <ArrowRight size={18} />
           </button>
         </div>
       )}

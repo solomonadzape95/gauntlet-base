@@ -28,6 +28,7 @@ type GameWeekEntry = {
   joined_at: string;
   final_return_bps: number | null;
   final_points: number | null;
+  transfer_penalty_points: number;
 };
 
 export async function GET(request: NextRequest) {
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
   const week = weeks.data.find((item) => item.status === "active") ?? weeks.data.find((item) => item.status === "upcoming") ?? weeks.data[0];
   if (!week) return withPlayerCookie(NextResponse.json({ week: null, entries: [], viewerJoined: false }), identity);
 
-  const rows = await supabase.from("game_week_entries").select("id,owner_user_id,guest_session_hash,lineup,joined_at,final_return_bps,final_points").eq("game_week_id", week.id).returns<GameWeekEntry[]>();
+  const rows = await supabase.from("game_week_entries").select("id,owner_user_id,guest_session_hash,lineup,joined_at,final_return_bps,final_points,transfer_penalty_points").eq("game_week_id", week.id).returns<GameWeekEntry[]>();
   if (rows.error) return NextResponse.json({ error: "Could not load game-week entries." }, { status: 503 });
 
   const userIds = rows.data.flatMap((entry) => entry.owner_user_id ? [entry.owner_user_id] : []);
@@ -70,14 +71,16 @@ export async function GET(request: NextRequest) {
       picks: entry.lineup.map((pick) => pick.ticker),
       returnPercent: live?.returnPercent ?? null,
       returnBps: live?.returnBps ?? null,
-      points: live?.points ?? null,
+      points: live ? Math.max(0, live.points - entry.transfer_penalty_points) : null,
+      transferPenaltyPoints: entry.transfer_penalty_points,
     };
   });
   const entries = marketDataStatus === "live" || marketDataStatus === "final"
     ? rankGameWeek(scored.map((entry) => ({ ...entry, returnPercent: entry.returnPercent!, returnBps: entry.returnBps!, points: entry.points! })))
     : scored.map((entry) => ({ ...entry, rank: null }));
   const viewerJoined = rows.data.some((entry) => isSamePlayer(identity, entry.owner_user_id, entry.guest_session_hash));
-  return withPlayerCookie(NextResponse.json({ week: { ...week, opening_prices: undefined, closing_prices: undefined }, entries, viewerJoined, marketDataStatus }), identity);
+  const viewerEntryId = rows.data.find((entry) => isSamePlayer(identity, entry.owner_user_id, entry.guest_session_hash))?.id ?? null;
+  return withPlayerCookie(NextResponse.json({ week: { ...week, opening_prices: undefined, closing_prices: undefined }, entries, viewerJoined, viewerEntryId, marketDataStatus }), identity);
 }
 
 export async function POST(request: NextRequest) {
@@ -92,12 +95,15 @@ export async function POST(request: NextRequest) {
   const team = await readActiveTeam(supabase, identity);
   const lineup = normalizeLineup(team?.picks);
   if (!team || !lineup) return withPlayerCookie(NextResponse.json({ error: "Create a complete active team before entering the game week." }, { status: 409 }), identity);
+  const transfer = await supabase.from("team_transfer_windows").select("penalty_points").eq("game_week_id", week.data.id)
+    .match(identity.userId ? { owner_user_id: identity.userId } : { guest_session_hash: identity.guestHash }).maybeSingle<{ penalty_points: number }>();
   const inserted = await supabase.from("game_week_entries").insert({
     game_week_id: week.data.id,
     team_id: team.id,
     owner_user_id: identity.userId,
     guest_session_hash: identity.userId ? null : identity.guestHash,
     lineup,
+    transfer_penalty_points: transfer.data?.penalty_points ?? 0,
   });
   if (inserted.error?.code === "23505") return NextResponse.json({ error: "Your team is already entered in this game week." }, { status: 409 });
   if (inserted.error) return NextResponse.json({ error: "Could not enter this game week." }, { status: 503 });

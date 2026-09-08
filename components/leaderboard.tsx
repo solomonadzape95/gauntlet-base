@@ -9,7 +9,7 @@ import { playerHeaders } from "@/lib/team-client";
 import { useActiveTeam } from "@/lib/use-active-team";
 
 type Week = { id: string; label: string; status: "upcoming" | "active" | "complete"; entry_lock_at: string; starts_at: string; ends_at: string };
-type Entry = { id: string; rank: number | null; name: string; picks: string[]; returnPercent: number | null; points: number | null };
+type Entry = { id: string; rank: number | null; name: string; picks: string[]; returnPercent: number | null; points: number | null; transferPenaltyPoints: number };
 
 export function Leaderboard() {
   const { session } = useGauntletAuth();
@@ -79,7 +79,7 @@ export function Leaderboard() {
         {loading ? <p className="leaderboard-empty">LOADING GAME WEEK…</p> : entries.length ? entries.map((entry) => (
           <article className="leaderboard-row" key={entry.id}>
             <strong className="leaderboard-rank">{entry.rank ? String(entry.rank).padStart(2, "0") : "—"}</strong>
-            <span><strong>{entry.name}</strong><small>{entry.picks.join(" · ")}</small></span>
+            <span><Link className="leaderboard-team-link" href={`/team/${entry.id}`}><strong>{entry.name}</strong><small>{entry.picks.join(" · ")}{entry.transferPenaltyPoints ? ` · −${entry.transferPenaltyPoints} TRANSFER PTS` : ""}</small></Link></span>
             <strong className={entry.returnPercent != null && entry.returnPercent >= 0 ? "up" : "down"}>{entry.returnPercent == null ? "—" : `${entry.returnPercent >= 0 ? "+" : ""}${entry.returnPercent.toFixed(2)}%`}</strong>
             <strong className="leaderboard-points">{entry.points == null ? "—" : entry.points.toLocaleString()}</strong>
           </article>

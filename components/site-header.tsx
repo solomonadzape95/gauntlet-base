@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, BarChart3, LayoutDashboard, Swords, Trophy } from "lucide-react";
+import { Activity, BarChart3, LayoutDashboard, Shield, Swords, Trophy, UserRound } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { WalletButton } from "@/components/wallet-button";
@@ -9,6 +9,8 @@ const links = [
   { href: "/me", label: "Desk", icon: LayoutDashboard },
   { href: "/battle", label: "Battle", icon: Activity },
   { href: "/leaderboard", label: "Ranks", icon: Trophy },
+  { href: "/leagues", label: "Leagues", icon: Shield },
+  { href: "/profile", label: "Profile", icon: UserRound },
   { href: "/impact", label: "Impact", icon: BarChart3 },
 ];
 

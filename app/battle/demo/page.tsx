@@ -7,11 +7,14 @@ import { ArrowRight, Check, Clock3, Copy, Radio, ShieldCheck, TrendingDown, Tren
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useGauntletAuth } from "@/components/gauntlet-auth";
+import { DitherAvatar } from "@/components/dither-avatar";
+import { StockLogo } from "@/components/stock-logo";
 import { resolveBattleIntent, storedSessionMatchesIntent } from "@/lib/battle-intent";
 import { hasUsablePrices, priceReturn, scoreLineup, type PricePoint, type ScoredPick } from "@/lib/battle-scoring";
 import { clearBattleSession, createBattleSession, readBattleSession, remainingBattleSeconds, saveBattleSession, updateBattlePrices } from "@/lib/battle-session";
 import type { BattleRecord } from "@/lib/battle-record";
 import { defaultPracticeDraft } from "@/lib/practice-game";
+import { getStock } from "@/lib/stocks";
 import { playerHeaders } from "@/lib/team-client";
 import { useBattleSession } from "@/lib/use-battle-session";
 import { useActiveTeam } from "@/lib/use-active-team";
@@ -30,7 +33,7 @@ function BattleBoundary() {
 }
 
 function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchParams> }) {
-  const { session: authSession } = useGauntletAuth();
+  const { session: authSession, profile } = useGauntletAuth();
   const router = useRouter();
   const intent = useMemo(() => resolveBattleIntent(searchParams), [searchParams]);
   const serverBattleId = intent.kind === "durable" ? intent.battleId : null;
@@ -39,8 +42,10 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverRole, setServerRole] = useState<"creator" | "opponent" | "visitor" | null>(null);
   const [serverMarketStatus, setServerMarketStatus] = useState<"waiting" | "live" | "held" | "final" | null>(null);
+  const [serverPlayers, setServerPlayers] = useState<{ creator: string; opponent: string } | null>(null);
   const challengerPicks = serverBattle?.player_picks ?? null;
-  const { team: draft, loading: teamLoading, error: teamLoadError } = useActiveTeam();
+  const { team: loadedDraft, loading: teamLoading, error: teamLoadError } = useActiveTeam();
+  const draft = process.env.NODE_ENV !== "production" && searchParams.get("preview") === "versus" ? defaultPracticeDraft() : loadedDraft;
   const storedSession = useBattleSession();
   const belongsToCurrentPlayer = authSession
     ? storedSession?.ownerUserId === authSession.user.id
@@ -70,6 +75,7 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
           setServerBattle(result.battle);
           setServerRole(result.role);
           setServerMarketStatus(result.marketDataStatus);
+          setServerPlayers(result.players);
           setMarketPreview(result.currentPrices);
         }
       })
@@ -88,6 +94,7 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
     if (saved && durableId) {
       const result = await fetchDurableBattle(durableId, authSession);
       setServerMarketStatus(result.marketDataStatus);
+      setServerPlayers(result.players);
       if (result.battle.status === "waiting" || !result.battle.opening_prices || !result.battle.starts_at || !result.battle.ends_at) {
         setServerBattle(result.battle);
         setMarketPreview(result.currentPrices);
@@ -137,6 +144,7 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
         setServerBattle(result.battle);
         setServerRole(result.role);
         setServerMarketStatus(result.marketDataStatus);
+        setServerPlayers(result.players);
         setMarketPreview(result.currentPrices);
       }).catch(() => setServerError("This challenge could not be refreshed."));
     }, 5_000);
@@ -178,6 +186,8 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
   const awaitingOpponent = Boolean(serverBattleId && serverRole === "creator" && serverBattle?.status === "waiting");
   const isTie = Math.abs(playerScore - rivalScore) < 0.000_001;
   const feedTimestamp = currentPrices.reduce((latest, point) => point.updatedAt > latest ? point.updatedAt : latest, "");
+  const playerName = profile?.username ?? "YOU";
+  const opponentName = serverBattleId ? (serverRole === "creator" ? serverPlayers?.opponent : serverPlayers?.creator) ?? "OPPONENT" : "NOVA";
 
   async function enterBattle() {
     if (!draft || serverRole === "creator") return;
@@ -259,7 +269,7 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
           <span className="battle-mode">NO MONEY AT RISK</span>
         </header>
         <section className="battle-lobby dashboard-panel">
-          <div><p className="eyebrow">DRAFT BEFORE YOU BATTLE</p><strong>{teamLoadError ? "YOUR TEAM COULD NOT BE LOADED" : challengerPicks ? "YOUR OPPONENT IS WAITING" : "BUILD YOUR FIRST TEAM"}</strong><p>{teamLoadError ?? "Choose three to five stocks and allocate the full virtual $1,000. This team will be yours across future battles; each match locks a snapshot when it begins."}</p></div>
+          <div><p className="eyebrow">DRAFT BEFORE YOU BATTLE</p><strong>{teamLoadError ? "YOUR TEAM COULD NOT BE LOADED" : challengerPicks ? "YOUR OPPONENT IS WAITING" : "BUILD YOUR FIRST TEAM"}</strong><p>{teamLoadError ?? "Choose three to five stocks within the 1,000-credit Squad Budget. This team will be yours across future battles; each match locks a snapshot when it begins."}</p></div>
           <Link className="primary-action" href={`/draft?returnTo=${encodeURIComponent(returnPath)}`}>{challengerPicks ? "DRAFT TEAM TO ACCEPT" : "DRAFT YOUR TEAM"} <ArrowRight size={16} /></Link>
         </section>
       </div>
@@ -294,14 +304,14 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
               <div><p className="eyebrow hazard">CHALLENGE SENT</p><strong>{activePlayerPicks.map((pick) => pick.ticker).join(" · ")}</strong><p>Your original practice battle is unchanged. This new head-to-head starts—and locks its Chainlink opening prices—when your opponent enters with their lineup.</p></div>
             </section>
           ) : <>
-            <section className="versus-grid">
-            <Competitor name="YOU" score={playerScore} rank={isTie ? "T" : leading ? "01" : "02"} stocks={holdings} leading={!isTie && leading} />
+            <section className="versus-grid arena-versus">
+            <Competitor name={playerName} score={playerScore} rank={isTie ? "T" : leading ? "01" : "02"} stocks={holdings} leading={!isTie && leading} side="left" />
             <div className="versus-mark">VS</div>
-            <Competitor name={activeSession?.serverRole === "creator" ? "OPPONENT" : challengerPicks ? "CHALLENGER" : "NOVA"} score={rivalScore} rank={isTie ? "T" : leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
+            <Competitor name={opponentName} score={rivalScore} rank={isTie ? "T" : leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
               const opening = openingPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               const current = currentPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               return [pick.ticker, priceReturn(opening, current)] as const;
-            })} leading={!isTie && !leading} />
+            })} leading={!isTie && !leading} side="right" />
             </section>
             <section className="battle-proof"><ShieldCheck size={20} /><div><strong>CHAINLINK TOTAL-RETURN SCORE</strong><p>This battle uses virtual funds and official Base feed addresses. Owning stocks is optional and never changes the score.{marketError ? ` ${marketError}` : ""}</p></div></section>
             <section className="battle-conversion dashboard-panel">
@@ -324,13 +334,13 @@ function formatDuration(seconds: number) {
   return [hours, minutes, rest].map((value) => String(value).padStart(2, "0")).join(":");
 }
 
-type DurableBattleResponse = { battle?: BattleRecord; currentPrices?: PricePoint[]; role?: "creator" | "opponent" | "visitor"; marketDataStatus?: "waiting" | "live" | "held" | "final"; error?: string };
+type DurableBattleResponse = { battle?: BattleRecord; currentPrices?: PricePoint[]; role?: "creator" | "opponent" | "visitor"; marketDataStatus?: "waiting" | "live" | "held" | "final"; players?: { creator: string; opponent: string }; error?: string };
 
 async function fetchDurableBattle(id: string, session: Session | null) {
   const response = await fetch(`/api/challenges/${encodeURIComponent(id)}`, { cache: "no-store", headers: playerHeaders(session) });
   const result = await response.json() as DurableBattleResponse;
-  if (!response.ok || !result.battle || !result.currentPrices || !result.role || !result.marketDataStatus) throw new Error(result.error ?? "Could not load this challenge.");
-  return { battle: result.battle, currentPrices: result.currentPrices, role: result.role, marketDataStatus: result.marketDataStatus };
+  if (!response.ok || !result.battle || !result.currentPrices || !result.role || !result.marketDataStatus || !result.players) throw new Error(result.error ?? "Could not load this challenge.");
+  return { battle: result.battle, currentPrices: result.currentPrices, role: result.role, marketDataStatus: result.marketDataStatus, players: result.players };
 }
 
 async function joinDurableBattle(id: string, session: Session | null) {
@@ -347,14 +357,14 @@ async function markDurableBattleShared(id: string, session: Session | null) {
   await fetch(`/api/challenges/${encodeURIComponent(id)}`, { method: "POST", headers: playerHeaders(session) });
 }
 
-function Competitor({ name, score, rank, stocks, leading = false }: { name: string; score: number; rank: string; stocks: readonly (readonly [string, number])[]; leading?: boolean }) {
+function Competitor({ name, score, rank, stocks, leading = false, side }: { name: string; score: number; rank: string; stocks: readonly (readonly [string, number])[]; leading?: boolean; side: "left" | "right" }) {
   return (
-    <article className={`competitor ${leading ? "leading" : ""}`}>
-      <div className="competitor-top"><span className="rank">{rank}</span><span className="status-chip"><span /> VIRTUAL</span></div>
-      <h2>{name}</h2><p className="wallet-address">PRACTICE PORTFOLIO</p>
+    <article className={`competitor arena-side ${side} ${leading ? "leading" : ""}`}>
+      <div className="competitor-top"><span className="rank">{rank}</span><span className="status-chip"><span /> {leading ? "LEADING" : "LIVE"}</span></div>
+      <div className="arena-manager"><DitherAvatar seed={`${name}:${side}`} size={52} /><div><small>TEAM</small><h2>{name}</h2></div></div>
       <strong className="battle-score">{score >= 0 ? "+" : ""}{score.toFixed(2)}%</strong>
       <div className="holding-list">
-        {stocks.map(([ticker, change]) => <div key={ticker}><span>{ticker}</span><strong className={change >= 0 ? "up" : "down"}>{change >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}{change >= 0 ? "+" : ""}{change.toFixed(2)}%</strong></div>)}
+        {stocks.map(([ticker, change], index) => <div key={ticker} style={{ "--stock-tone": getStock(ticker)?.tone ?? "#f5ff00" } as React.CSSProperties}><span className="arena-pick-number">0{index + 1}</span><span className="arena-stock-logo"><StockLogo ticker={ticker} /></span><span><b>{getStock(ticker)?.company ?? ticker}</b><small>{ticker}</small></span><strong className={change >= 0 ? "up" : "down"}>{change >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}{change >= 0 ? "+" : ""}{change.toFixed(2)}%</strong></div>)}
       </div>
     </article>
   );

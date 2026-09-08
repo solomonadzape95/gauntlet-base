@@ -22,6 +22,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const role = isSamePlayer(identity, found.data.creator_user_id, found.data.creator_guest_hash)
     ? "creator"
     : isSamePlayer(identity, found.data.opponent_user_id, found.data.opponent_guest_hash) ? "opponent" : "visitor";
+  const playerIds = [found.data.creator_user_id, found.data.opponent_user_id].filter((value): value is string => Boolean(value));
+  const profiles = playerIds.length ? await supabase.from("profiles").select("user_id,username").in("user_id", playerIds) : { data: [] as { user_id: string; username: string }[] };
+  const profileNames = new Map((profiles.data ?? []).map((profile) => [profile.user_id, profile.username]));
+  const players = {
+    creator: found.data.creator_user_id ? profileNames.get(found.data.creator_user_id) ?? "Verified player" : `Guest ${found.data.creator_guest_hash?.slice(0, 4).toUpperCase()}`,
+    opponent: found.data.opponent_user_id ? profileNames.get(found.data.opponent_user_id) ?? "Verified player" : found.data.opponent_guest_hash ? `Guest ${found.data.opponent_guest_hash.slice(0, 4).toUpperCase()}` : "Opponent",
+  };
 
   let battle: BattleRecord = toPublicBattle(found.data);
   try {
@@ -42,11 +49,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         marketDataStatus = "final";
       }
     }
-    return withPlayerCookie(NextResponse.json({ battle, currentPrices, role, marketDataStatus }, { headers: { "Cache-Control": "no-store" } }), identity);
+    return withPlayerCookie(NextResponse.json({ battle, currentPrices, role, marketDataStatus, players }, { headers: { "Cache-Control": "no-store" } }), identity);
   } catch (cause) {
     console.error("Could not refresh durable challenge", cause);
     const lastSnapshot = await supabase.from("battle_price_snapshots").select("prices").eq("battle_id", id).eq("kind", "current").order("captured_at", { ascending: false }).limit(1).maybeSingle<{ prices: PricePoint[] }>();
-    return withPlayerCookie(NextResponse.json({ battle, currentPrices: battle.end_prices ?? lastSnapshot.data?.prices ?? [], role, marketDataStatus: battle.status === "complete" ? "final" : "held", warning: "Live prices are temporarily unavailable." }), identity);
+    return withPlayerCookie(NextResponse.json({ battle, currentPrices: battle.end_prices ?? lastSnapshot.data?.prices ?? [], role, marketDataStatus: battle.status === "complete" ? "final" : "held", players, warning: "Live prices are temporarily unavailable." }), identity);
   }
 }
 

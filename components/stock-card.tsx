@@ -6,11 +6,13 @@ export function StockCard({
   stock,
   selected = false,
   disabled = false,
+  draftCost,
   onSelect,
 }: {
   stock: Stock;
   selected?: boolean;
   disabled?: boolean;
+  draftCost?: number;
   onSelect?: () => void;
 }) {
   const interactive = Boolean(onSelect);
@@ -33,7 +35,8 @@ export function StockCard({
       </div>
       <div className="stock-card-bottom">
         <h3>{stock.company}</h3>
-        {quote && <strong>${quote.price.toFixed(2)}</strong>}
+        <strong>{draftCost ? `${draftCost} CR` : quote ? `$${quote.price.toFixed(2)}` : "—"}</strong>
+        {draftCost && <small className="draft-cost-note">DRAFT COST · ONCHAIN PRICED</small>}
       </div>
     </Tag>
   );

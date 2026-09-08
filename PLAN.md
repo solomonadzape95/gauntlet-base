@@ -16,6 +16,10 @@ This document is the canonical plan for the Base Builder Quest version of Gauntl
 
 ## 1. The product thesis
 
+### Current implementation position — September 8, 2026
+
+The core loop, durable challenges, Game Week leaderboard, team persistence, team headquarters, server-priced transfer market, profiles, public team snapshots, and lightweight leagues are implemented locally. The project is now in live-backend validation and release hardening: migration `007`, scheduler configuration, two-account QA, wallet failure testing, verified impact indexing, deployment, and submission media remain.
+
 Tokenized stocks do not only need another trading screen. They need an approachable reason for a curious person to make a first selection, acquire a small amount, understand what they own, and return.
 
 Gauntlet uses a game to create that path:
@@ -51,7 +55,7 @@ The most important number is **new B20-owning wallets** [wallets that held none 
 ### V1 must do
 
 1. Let anyone create a three-to-five-stock fantasy draft without connecting a wallet.
-2. Display a $1,000 virtual portfolio the player can allocate across all picks, with an equal-split shortcut.
+2. Give every player a 1,000-credit Squad Budget and server-price each stock from its current onchain reference price.
 3. Explain the difference between virtual selections and real ownership.
 4. Restrict real purchase functionality to eligible non-US adults.
 5. Connect a Base-compatible wallet.
@@ -98,9 +102,7 @@ No wallet is requested here.
 
 The player selects between three and five stocks from an allowlist [a deliberately approved list] of official Coinbase tokenized stocks.
 
-For V1, players set the weight of each pick by allocating the full virtual $1,000. The interface begins with an equal split, then lets them express stronger or weaker conviction before locking the portfolio:
-
-The default divides the $1,000 virtual balance as evenly as possible. Players can then edit exact dollar allocations, but the total must remain exactly $1,000 before they continue.
+For V1, every stock has a whole-credit Draft Cost derived from its current Chainlink onchain reference price and bounded between 25 and 500 credits so team combinations remain playable. Players select three to five stocks whose combined Draft Cost does not exceed 1,000 credits. Unspent credits remain in the Bank and earn no return.
 
 Stock cards should be neutral and consistent. They may show company name, ticker, verified status, current price, and recent price movement, but must not label anything as `recommended`, `safe`, or `best`.
 
@@ -233,10 +235,10 @@ For each stock:
 stock return = (current total-return price / starting total-return price) - 1
 ```
 
-For the allocation-weighted portfolio:
+For the Draft-Cost-weighted team:
 
 ```text
-portfolio return = sum of (stock return × that stock's share of the virtual $1,000)
+team return = sum of (stock return × locked Draft Cost / 1,000-credit Squad Budget)
 ```
 
 A **total-return price** [a price adjusted to account for dividends and stock splits] should come from the official Chainlink feed associated with the B20 token.
@@ -266,12 +268,15 @@ The product's retention loop [the reason a player comes back] is the rematch, no
 |---|---|---|---|
 | `/` | Landing | Explain the loop and start a draft | P0 |
 | `/draft` | Stock draft | Select three to five stocks | P0 |
-| `/draft/[id]` | Draft review | Review virtual allocation and start ownership | P0 |
+| `/draft/[id]` | Team review | Review Draft Costs and Bank, then start ownership | P0 |
 | `/draft/[id]/own` | Own My Draft | Eligibility, amount, wallet, quotes, purchases | P0 |
 | `/draft/[id]/reveal` | Ownership reveal | Verify balances and create the emotional payoff | P0 |
 | `/battle/[id]` | Battle | Join, follow, and complete a battle | P0 |
 | `/battle` | Battle desk | Choose solo practice or create a timed friend challenge | P0 |
 | `/leaderboard` | Game Week leaderboard | Enter one team snapshot and rank weighted weekly performance | P0 |
+| `/leagues` | Private leagues | Create or join a code-based group and compare member Game Week scores | P1 |
+| `/team/[id]` | Public team | Inspect a player's locked Game Week lineup from Ranks or a league | P1 |
+| `/profile` | Player profile | Change the username and dither identity used across competition surfaces | P1 |
 | `/me` | Player dashboard | Drafts, holdings used in game, battles, activity | P1 |
 | `/impact` | Public proof dashboard | Show verified adoption and transactions | P0 |
 | `/how-it-works` | Explanation | Explain virtual play, ownership, scoring, and risk | P1 |
@@ -656,7 +661,7 @@ Viewer opens battle
   -> server loads battle and start snapshots
   -> server reads or briefly caches current Chainlink prices
   -> score engine calculates each stock return
-  -> allocation-weighted returns become portfolio scores
+  -> Draft-Cost-weighted returns become team scores
   -> browser displays ranks and contribution chart
   -> polling repeats at a reasonable interval
 ```

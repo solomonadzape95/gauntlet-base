@@ -7,13 +7,17 @@ Updated: September 8, 2026
 - Simple landing loop: `PLAY → market strip → OWN`.
 - Three-to-five stock selection with centered, brand-colour dither logos.
 - Logo-local dither pulse on selection.
-- One active $1,000 virtual team per player with exact-total validation.
+- One active team per player, assembled from server-derived onchain Draft Costs within a 1,000-credit Squad Budget.
+- Team headquarters at `/draft` with Squad, Transfers, and Market views, Bank, current points, player identity, and responsive layouts.
+- Transfer-window locking during active Game Weeks, one free incoming stock, and 25-point deductions for later transfers.
 - Free virtual teams saved through a private account/guest API, with browser fallback when persistence is unavailable.
 - Player desk at `/me` showing the latest lineup, weighted practice return, activity, and battle entry.
 - Refresh-safe practice battles using official Base Chainlink total-return feeds, immutable openings, feed freshness, weighted scoring, ties, and final states.
 - Durable two-browser challenge links with account/guest-bound roles and selectable one-hour or 24-hour windows.
 - Explicit battle desk separating fresh solo practice from durable friend challenges.
 - Scheduled Game Week entries, immutable team snapshots, performance points, and a week-specific leaderboard.
+- Lightweight private leagues with create/join codes and the latest Game Week member table.
+- Public team snapshots linked from Ranks and league member rows.
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
 - Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
 - Server-enforced location checks on both indicative and executable purchase quotes.
@@ -25,9 +29,10 @@ Updated: September 8, 2026
 
 ### 1. Durable game backend
 
-- Apply migrations `202609080004_active_teams.sql` through `202609080006_game_weeks.sql` in order.
+- Apply migrations `202609080004_active_teams.sql` through `202609080007_team_economy_and_leagues.sql` in order.
 - Validate creator/opponent synchronization and deduplicated funnel events against the live project.
 - Validate Game Week entry locking, shared opening prices, live ranking, and final settlement against the live project.
+- Validate server-priced transfers, active-week locking, penalty propagation, league creation, and two-account joining against the live project.
 - Configure a scheduler to `POST /api/game-weeks/tick` with `Authorization: Bearer $GAME_WEEK_CRON_SECRET` at least once per minute around market boundaries.
 
 ### 2. Real scoring data
@@ -62,4 +67,4 @@ Updated: September 8, 2026
 
 ## Explicitly later
 
-- Leagues, seasons, owner clubs, creator-hosted events, chat, notifications, NFTs, custom tokens, lending, governance, and AI investment advice.
+- Seasons, league-specific scoring, owner clubs, creator-hosted events, chat, notifications, NFTs, custom tokens, lending, governance, and AI investment advice.

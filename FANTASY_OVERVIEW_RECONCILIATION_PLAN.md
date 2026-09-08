@@ -6,7 +6,7 @@
 
 ## Decision in one sentence
 
-Keep Gauntlet's current `draft -> own -> compete -> proof` thesis and its existing Gauntlet-colour/Nebulas-structure design; adopt the source document's contextual conversion prompt, scheduled leaderboard, and share card, but reject its arbitrary salary cap, mocked social filler, fake-token fallback, and third-party geo service.
+Keep Gauntlet's current `draft -> own -> compete -> proof` thesis and its existing Gauntlet-colour/Nebulas-structure design; adopt a server-priced Squad Budget, scheduled leaderboard, team headquarters, lightweight leagues, and contextual conversion, while rejecting mocked social filler, fake-token fallback, and third-party geo services.
 
 ## The product we should submit
 
@@ -17,7 +17,7 @@ The demo spine should be:
 ```text
 landing
   -> draft 3–5 verified B20 stocks
-  -> allocate a virtual $1,000
+  -> assemble a team within a 1,000-credit Squad Budget
   -> play a practice battle with real market data
   -> see a contextual "you could own this lineup" moment
   -> pass eligibility and connect a wallet
@@ -35,7 +35,7 @@ This includes the useful insight from the source document—conversion feels str
 | Topic | Source document | Current Gauntlet | Decision | Gap |
 |---|---|---|---|---|
 | Picks | Exactly 5 stocks | 3–5 stocks | **Keep current.** Three picks makes a $5 starter purchase more plausible and lowers first-run friction; five remains available. | Negligible |
-| Draft constraint | Fake $1,000 salary cap with arbitrary stock costs | Allocate a full virtual budget across picks | **Merge the useful parts.** Keep conviction-weighted allocation instead of arbitrary per-stock prices, but use the document's clearer $1,000 scale. | Change budget to $1,000 |
+| Draft constraint | Fake $1,000 salary cap with arbitrary stock costs | Previously allocated a full virtual budget across picks | **Use a truthful fantasy market.** Draft Costs come from fresh onchain reference prices, bounded to keep combinations playable; unused credits stay in the Bank. | Implemented server-side |
 | Stock universe | 15–20 familiar generic tickers | 10 allowlisted official B20 contracts | **Keep current.** Contract truth and tested liquidity matter more than catalogue size. Add stocks only after address, feed, disclosure, decimals, and quote tests pass. | No change |
 | Market data | Finnhub/Alpha Vantage/Yahoo and page-refresh scoring | Static practice values now; official Chainlink B20 total-return feeds planned | **Use the current architecture, finish the integration.** One official feed should power battle snapshots and results. Do not add a second market-data vendor for the core score. | Large, P0 |
 | Score window | Since draft time | Since battle start, allocation-weighted | **Keep current.** A fixed challenge start is fairer and reproducible. A solo practice return may begin at draft lock, but battle scoring begins when both sides are ready. | Negligible |
@@ -47,7 +47,7 @@ This includes the useful insight from the source document—conversion feels str
 | Sharing | Generated result image and prefilled X post | Challenge/result sharing planned, not built | **Adopt.** Generate a branded server-side Open Graph image and a native share/copy-link action. Phrase performance as a game result, not investment promotion. | Large, P0/P1 |
 | Reactions/trash talk | Suggested social feature | Explicitly excluded | **Reject for submission.** It needs moderation, identity, and persistence while adding little to verified adoption. | No change |
 | “X is buzzing” ticker | Mocked trend flavour | Not present | **Reject.** Fake live data damages the proof-first product. | No change |
-| Private leagues | Stretch | Public challenge URLs planned | **Keep challenges, skip leagues.** The invite loop exists without league management. | No change |
+| Private leagues | Stretch | Public challenge URLs working | **Add lightweight leagues.** Create/join codes and Game Week member tables deepen the weekly loop without adding chat, seasons, or league-specific scoring. | Implemented |
 | Public proof | Not central | `/impact` is a first-class surface | **Keep and finish current.** Impact proves adoption while the Game Week leaderboard proves competition; neither should impersonate the other. | Large, P0 |
 | Visual style | Generic “clean card” guidance | Gauntlet identity using Nebulas dashboard structure | **Keep current.** Use the source only for product beats, never as visual direction. | No change |
 
@@ -65,11 +65,18 @@ Nebulas contributes structure, not its brand palette:
 
 ## Current truth
 
+### Plan position now
+
+- **Product/game loop:** built through the reusable team, server-priced Squad Budget, Game Weeks, direct challenges, public team snapshots, and lightweight leagues. Live Supabase validation is the remaining gate.
+- **Ownership:** recovery and post-transaction balance verification are built; real minimum-order testing across the allowlist remains.
+- **Sharing:** durable challenge URLs, copy/share controls, and branded Open Graph presentation are built; completed-result/rematch sharing still needs a final pass.
+- **Proof/release:** `/impact`, production deployment, scheduler configuration, live indexing, mobile-wallet failure testing, and submission capture remain.
+
 ### Already strong enough to preserve
 
 - A clear landing proposition with no wallet wall.
 - A coherent 3–5 stock card draft.
-- Exact $1,000 allocation with an equal-split default.
+- A 1,000-credit Squad Budget with onchain-derived Draft Costs and visible Bank.
 - Optional free play and optional real ownership.
 - Live 0x indicative and firm-quote route structure.
 - Exact USDC approval followed by sequential purchases.
@@ -81,13 +88,11 @@ Nebulas contributes structure, not its brand palette:
 
 ### Claims that are not yet safe to make
 
-- “Live” practice scoring: current market prices and changes are hardcoded.
-- “Draft owned”: the UI currently treats confirmed transaction receipts as sufficient and does not verify a pre/post B20 balance increase.
-- Recovery: receipt progress is only component state, so refresh/navigation can lose partial-purchase recovery.
-- Public battles: the current opponent, timer, and match are a local demo.
+- End-to-end durability: the active-team, battle, Game Week, transfer, and league schema is built but still needs live two-account validation after migration `202609080007` is applied.
+- Production settlement: the Game Week tick route exists, but the scheduler and opening/closing boundary behaviour are not yet proven in production.
+- Mainnet ownership reliability: receipt recovery and balance verification are built, but minimum viable order sizes still need testing for every supported stock.
 - Public impact: the page is truthful but has no indexer or confirmed records.
-- Location enforcement: the checkbox is not an IP-country gate.
-- Shareability: there is no durable challenge URL, result URL, or generated card.
+- Release safety: mobile wallet switching, rejected signatures, stale quotes, insufficient funds/gas, and partial-purchase recovery still need a deployed test pass.
 
 ### Technical decisions checked against current primary sources
 
@@ -105,8 +110,19 @@ Nebulas contributes structure, not its brand palette:
 - Complete: official Base Chainlink total-return feed integration, weighted scoring, freshness state/timestamp, refresh-safe 24-hour practice sessions, ties, and final state.
 - Complete for practice mode: challenge URLs carry one battle identity, opening feed snapshot, lineup, and end time so a second browser joins the same scoring window.
 - Complete: contextual ownership route restores the exact saved draft without rebuilding it.
-- Remaining before public submission claims: Supabase-backed drafts/purchase attempts/battles, signed or server-stored public challenge records, end-to-end wallet purchase tests at real minimum sizes, share image metadata, analytics/indexing, and live `/impact` aggregates.
+- Complete in code: Supabase-backed teams, durable challenges, Game Weeks, transfer penalties, public team snapshots, leagues, and branded share metadata.
+- Remaining before public submission claims: apply the latest migration, run two-account live validation, test wallet purchases at real minimum sizes, configure settlement scheduling, and add analytics/indexing plus live `/impact` aggregates.
 - Practice battles are deliberately local and unshareable. Every public challenge/result URL must resolve to an existing server record.
+
+### Product expansion checkpoint — 2026-09-08
+
+- `/draft` becomes the team headquarters after the first team is saved, with Squad, Transfers, and Market views.
+- New teams and transfers use server-derived Draft Costs based on fresh Chainlink reference prices, bounded to 25–500 credits for playable combinations.
+- The 1,000-credit Squad Budget may leave credits in the Bank; Bank earns no return.
+- An active Game Week closes the Transfer Window. Before lock, one incoming stock is free and each additional incoming stock deducts 25 points from the next Game Week.
+- A pre-lock team edit updates that player's upcoming Game Week snapshot; the start boundary makes it immutable.
+- Lightweight leagues support creation, invite codes, membership, and the latest Game Week table.
+- Public locked team snapshots are reachable from Ranks and league member rows.
 
 ### Phase 0 — Freeze the submission contract (30 minutes)
 
@@ -151,7 +167,7 @@ Nebulas contributes structure, not its brand palette:
 3. Create a public challenge URL with `waiting`, `active`, and `complete` states.
 4. Let the opponent join with a virtual draft; mark the match `owned` only when both drafts pass onchain ownership verification.
 5. Read official Chainlink B20 total-return feeds for start/current/end snapshots.
-6. Move scoring into one pure shared module; score percentage return weighted by virtual allocation, never by real money spent.
+6. Move scoring into one pure shared module; score percentage return weighted by Draft Cost against the full Squad Budget, never by real money spent.
 7. Poll current scores every 30–60 seconds and show the feed timestamp/freshness.
 8. Settle idempotently at end time and support tie/result/rematch states.
 
@@ -206,7 +222,7 @@ If time collapses, ship in this order:
 2. **Game proof:** persisted draft plus one reproducible practice result using official feed data.
 3. **Growth proof:** shareable result/challenge URL and image.
 4. **Nice to have:** live opponent joining, timed settlement, rematch.
-5. **Cut:** undated all-time leaderboard, reactions, trash talk, leagues, trend ticker, weekly recap, extra stocks, custom token, testnet theatre.
+5. **Cut:** undated all-time leaderboard, reactions, trash talk, seasons, league-specific rules, trend ticker, weekly recap, extra stocks, custom token, testnet theatre.
 
 If multi-stock mainnet purchasing remains unreliable, use the Anchor Stock fallback and say exactly that. A smaller real loop is a better submission than a broad simulated one.
 
@@ -221,7 +237,7 @@ If multi-stock mainnet purchasing remains unreliable, use the Anchor Stock fallb
 - [ ] Partial completion survives refresh and retries only incomplete rows.
 - [ ] `OWNED` requires an onchain balance increase and confirmed receipt.
 - [ ] Every confirmed purchase has a BaseScan link.
-- [ ] Battle scores are allocation-weighted percentages and ignore real spend.
+- [ ] Battle and Game Week scores are Draft-Cost-weighted against the full Squad Budget; Bank earns zero return and real spend remains irrelevant.
 - [ ] Public challenge/result URLs survive a new browser session.
 - [ ] Share cards correctly say `VIRTUAL` or `OWNED`.
 - [ ] `/impact` contains no invented activity.
@@ -234,7 +250,7 @@ If multi-stock mainnet purchasing remains unreliable, use the Anchor Stock fallb
 
 - Undated all-time leaderboard
 - Reactions, comments, or trash talk
-- Private leagues and seasons
+- Seasons and league-specific scoring
 - “Trending on X” data
 - Weekly recap automation
 - Custom token or custom custody contract

@@ -15,9 +15,9 @@ export async function saveActiveTeam(picks: DraftPick[], session: Session | null
     },
     body: JSON.stringify({ picks }),
   });
-  if (!response.ok) return null;
-  const result = await response.json() as { team?: PracticeDraft };
-  return result.team ?? null;
+  const result = await response.json() as { team?: PracticeDraft; error?: string };
+  if (!response.ok || !result.team) throw new Error(result.error ?? "Could not save the active team.");
+  return result.team;
 }
 
 export async function fetchActiveTeam(session: Session | null) {

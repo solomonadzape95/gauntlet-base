@@ -13,7 +13,7 @@ type LifecycleWeek = {
   opening_prices: PricePoint[] | null;
 };
 
-type LifecycleEntry = { id: string; lineup: ScoredPick[] };
+type LifecycleEntry = { id: string; lineup: ScoredPick[]; transfer_penalty_points: number };
 
 export async function tickGameWeeks(supabase: SupabaseClient, now = new Date()) {
   const result = { activated: null as string | null, settled: null as string | null };
@@ -41,7 +41,7 @@ export async function tickGameWeeks(supabase: SupabaseClient, now = new Date()) 
     requireFreshEntryPrices(entries, closing);
     const scores = entries.map((entry) => {
       const score = scoreGameWeek(entry.lineup, dueToEnd.opening_prices!, closing);
-      return { id: entry.id, return_bps: score.returnBps, points: score.points };
+      return { id: entry.id, return_bps: score.returnBps, points: Math.max(0, score.points - entry.transfer_penalty_points) };
     });
     const settled = await supabase.rpc("settle_game_week", { p_game_week_id: dueToEnd.id, p_closing_prices: closing, p_scores: scores });
     if (settled.error) throw settled.error;
@@ -52,7 +52,7 @@ export async function tickGameWeeks(supabase: SupabaseClient, now = new Date()) 
 }
 
 async function readEntries(supabase: SupabaseClient, gameWeekId: string) {
-  const entries = await supabase.from("game_week_entries").select("id,lineup").eq("game_week_id", gameWeekId).returns<LifecycleEntry[]>();
+  const entries = await supabase.from("game_week_entries").select("id,lineup,transfer_penalty_points").eq("game_week_id", gameWeekId).returns<LifecycleEntry[]>();
   if (entries.error) throw entries.error;
   return entries.data;
 }
