@@ -31,6 +31,8 @@ export async function POST(request: Request) {
     }).select(BATTLE_RECORD_SELECTION).single<BattleRecord>();
 
     if (result.error) throw result.error;
+    const event = await supabase.from("battle_events").insert({ battle_id: result.data.id, event_type: "challenge_created" });
+    if (event.error) console.warn("Challenge created without analytics event", event.error.message);
     return NextResponse.json({ battle: result.data }, { status: 201 });
   } catch (cause) {
     console.error("Could not create durable challenge", cause);

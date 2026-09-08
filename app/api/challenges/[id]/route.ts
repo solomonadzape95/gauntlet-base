@@ -80,5 +80,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .maybeSingle<BattleRecord>();
   if (result.error) return NextResponse.json({ error: "The challenge could not be joined." }, { status: 503 });
   if (!result.data) return NextResponse.json({ error: "This challenge was already joined or has ended." }, { status: 409 });
+  const event = await supabase.from("battle_events").upsert({ battle_id: id, event_type: "opponent_joined" }, { onConflict: "battle_id,event_type", ignoreDuplicates: true });
+  if (event.error) console.warn("Opponent joined without analytics event", event.error.message);
   return NextResponse.json({ battle: result.data });
+}
+
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "That challenge ID is invalid." }, { status: 400 });
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return NextResponse.json({ error: "Durable challenges are not configured yet." }, { status: 503 });
+
+  const event = await supabase.from("battle_events").upsert(
+    { battle_id: id, event_type: "challenge_shared" },
+    { onConflict: "battle_id,event_type", ignoreDuplicates: true },
+  );
+  if (event.error) return NextResponse.json({ error: "The share could not be recorded." }, { status: 503 });
+  return NextResponse.json({ recorded: true });
 }

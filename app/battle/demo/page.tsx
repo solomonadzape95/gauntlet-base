@@ -174,6 +174,7 @@ function Battle() {
       openingPrices: activeSession.openingPrices,
     });
     let url = `${window.location.origin}/battle/demo?challenge=${code}`;
+    let durableBattleId = activeSession.serverBattleId;
     if (activeSession.serverBattleId) {
       url = `${window.location.origin}/battle/demo?battle=${activeSession.serverBattleId}`;
     } else {
@@ -182,6 +183,7 @@ function Battle() {
         const next = { ...activeSession, serverBattleId: battle.id, serverRole: "creator" as const };
         saveBattleSession(next);
         setServerBattle(battle);
+        durableBattleId = battle.id;
         url = `${window.location.origin}/battle/demo?battle=${battle.id}`;
       } catch {
         // Portable practice links remain available while server persistence is offline.
@@ -191,6 +193,7 @@ function Battle() {
       try {
         setShareState("idle");
         await navigator.share({ title: "Gauntlet practice battle", text: "Run your lineup against mine on Gauntlet.", url });
+        if (durableBattleId) void markDurableBattleShared(durableBattleId);
         setShareState("shared");
         window.setTimeout(() => setShareState("idle"), 1800);
         return;
@@ -199,6 +202,7 @@ function Battle() {
       }
     }
     await navigator.clipboard.writeText(url);
+    if (durableBattleId) void markDurableBattleShared(durableBattleId);
     setShareState("copied");
     window.setTimeout(() => setShareState("idle"), 1800);
   }
@@ -235,7 +239,8 @@ function Battle() {
           </section>
           <section className="battle-proof"><ShieldCheck size={20} /><div><strong>CHAINLINK TOTAL-RETURN SCORE</strong><p>This battle uses virtual funds and official Base feed addresses. Owning stocks is optional and never changes the score.{marketError ? ` ${marketError}` : ""}</p></div></section>
           <section className="battle-conversion dashboard-panel">
-            <div><p className="eyebrow hazard">{isComplete ? "FINAL LINEUP RESULT" : "LIVE LINEUP CHECKPOINT"}</p><h2>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}% {isComplete ? "FINAL." : "SO FAR."}</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
+            <div className="battle-conversion-copy"><p className="checkpoint-heading">{isComplete ? "FINAL LINEUP RESULT" : "LIVE LINEUP CHECKPOINT"}</p><h2><span>PNL</span>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}%</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
+            <div className="battle-conversion-art" aria-hidden />
             <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
           </section>
           <button className="secondary-action battle-share" disabled={shareState === "creating"} onClick={() => void shareChallenge()}>{shareState === "idle" || shareState === "creating" ? <Copy size={15} /> : <Check size={15} />}{shareState === "creating" ? "CREATING CHALLENGE…" : shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
@@ -281,6 +286,10 @@ async function joinDurableBattle(id: string, picks: ScoredPick[]) {
   const result = await response.json() as DurableBattleResponse;
   if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not join this challenge.");
   return result.battle;
+}
+
+async function markDurableBattleShared(id: string) {
+  await fetch(`/api/challenges/${encodeURIComponent(id)}`, { method: "POST" });
 }
 
 function Competitor({ name, score, rank, stocks, leading = false }: { name: string; score: number; rank: string; stocks: readonly (readonly [string, number])[]; leading?: boolean }) {

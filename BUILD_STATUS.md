@@ -15,16 +15,18 @@ Updated: September 8, 2026
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
 - Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
 - Server-enforced location checks on both indicative and executable purchase quotes.
-- A least-privilege Supabase game-record migration and durable challenge UI/API are prepared but not deployed/configured.
+- The user has applied the least-privilege Supabase game-record migration; durable challenge UI/API still needs the local server secret and live two-browser validation.
+- Challenge creation, successful sharing, and opponent joins have durable funnel events in migration `202609080003_battle_events.sql`.
 - Public impact dashboard truthfully showing zero until balance-verified server records exist, with BaseScan links as independent proof.
 
 ## Submission-critical work left
 
 ### 1. Durable game backend
 
-- Apply and validate the prepared Supabase tables for drafts, picks, purchase attempts, battles, and battle snapshots.
+- Validate the applied Supabase tables for drafts, picks, purchase attempts, battles, and battle snapshots through the configured server API.
 - Replace browser-only draft storage with signed server persistence while keeping guest play frictionless.
 - Install the server secret, apply the migration, then validate creator/opponent synchronization against the live project.
+- Apply `202609080003_battle_events.sql` and verify one deduplicated event row for each challenge funnel step.
 
 ### 2. Real scoring data
 

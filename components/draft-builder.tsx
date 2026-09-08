@@ -14,9 +14,11 @@ import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "@/lib/all
 import { markPracticeDraftOwned, readPracticeDrafts, savePracticeDraft } from "@/lib/practice-game";
 import {
   attachPurchaseWallet,
+  clearPurchaseSession,
   confirmedPurchaseCount,
   createPurchaseSession,
   isPurchaseSessionComplete,
+  isPurchaseSessionEditable,
   readPurchaseSession,
   savePurchaseSession,
   updatePurchaseRow,
@@ -85,18 +87,17 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
   const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
 
   useEffect(() => {
+    if (!ownDraftId) return;
     let saved = readPurchaseSession();
-    if (ownDraftId) {
-      const target = readPracticeDrafts().find((draft) => draft.id === ownDraftId);
-      const existingTransaction = saved?.rows.some((row) => row.txHash || row.status !== "ready");
-      if (target && (!saved || (saved.draftId !== target.id && !existingTransaction))) {
-        const allocationCents = allocateByWeight(target.picks.map((pick) => pick.virtualAmount), 500);
-        saved = savePurchaseSession(createPurchaseSession({
-          draftId: target.id,
-          realAmount: 5,
-          picks: target.picks.map((pick, index) => ({ ...pick, allocationCents: allocationCents[index] })),
-        }));
-      }
+    const target = readPracticeDrafts().find((draft) => draft.id === ownDraftId);
+    const existingTransaction = saved?.rows.some((row) => row.txHash || row.status !== "ready");
+    if (target && (!saved || (saved.draftId !== target.id && !existingTransaction))) {
+      const allocationCents = allocateByWeight(target.picks.map((pick) => pick.virtualAmount), 500);
+      saved = savePurchaseSession(createPurchaseSession({
+        draftId: target.id,
+        realAmount: 5,
+        picks: target.picks.map((pick, index) => ({ ...pick, allocationCents: allocationCents[index] })),
+      }));
     }
     if (!saved) return;
 
@@ -223,7 +224,17 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
         allocationCents: allocationCents[index],
       })),
     }));
+    router.push(`/draft?own=${encodeURIComponent(draft.id)}`);
     setStep("own");
+  };
+
+  const editDraft = () => {
+    if (!isPurchaseSessionEditable(purchaseSession)) return;
+    clearPurchaseSession();
+    setPurchaseSession(null);
+    resetQuote();
+    setStep("review");
+    router.replace("/draft");
   };
 
   const changeRealAmount = (amount: number) => {
@@ -505,6 +516,9 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
                   <p className="eyebrow hazard">ROUND 03 · OWN YOUR PICKS</p>
                   <h1>OWN YOUR <em>LINEUP.</em></h1>
                   <p className="lede">Buy a miniature version of your fantasy portfolio. The stocks go directly to your wallet.</p>
+                  <button className="ownership-edit" disabled={!isPurchaseSessionEditable(purchaseSession)} onClick={editDraft}>
+                    {purchaseStarted ? "PURCHASE STARTED · DRAFT LOCKED" : "← EDIT DRAFT"}
+                  </button>
                 </div>
                 <div className="trust-list">
                   <p><ShieldCheck size={18} /> You control the stocks</p>

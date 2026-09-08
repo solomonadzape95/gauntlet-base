@@ -6,6 +6,7 @@ import {
   confirmedPurchaseCount,
   createPurchaseSession,
   isPurchaseSessionComplete,
+  isPurchaseSessionEditable,
   parsePurchaseSessionSnapshot,
   updatePurchaseRow,
 } from "../lib/purchase-session.ts";
@@ -20,6 +21,7 @@ test("creates a recoverable ready row for every pick", () => {
   const session = createPurchaseSession({ draftId: "draft-1", realAmount: 5, picks });
   assert.deepEqual(session.rows.map((row) => row.status), ["ready", "ready", "ready"]);
   assert.equal(session.rows.reduce((total, row) => total + row.allocationCents, 0), 500);
+  assert.equal(isPurchaseSessionEditable(session), true);
 });
 
 test("requires a verified balance increase on every row before completion", () => {
@@ -51,6 +53,7 @@ test("locks an in-progress purchase to its original wallet", () => {
     status: "submitted",
     txHash: `0x${"2".repeat(64)}`,
   });
+  assert.equal(isPurchaseSessionEditable(session), false);
 
   assert.throws(
     () => attachPurchaseWallet(session, `0x${"b".repeat(40)}`),

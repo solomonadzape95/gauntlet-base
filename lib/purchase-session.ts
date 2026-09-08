@@ -76,6 +76,10 @@ export function savePurchaseSession(session: PurchaseSession): PurchaseSession {
   return next;
 }
 
+export function clearPurchaseSession() {
+  if (typeof window !== "undefined") window.localStorage.removeItem(PURCHASE_SESSION_KEY);
+}
+
 export function updatePurchaseRow(
   session: PurchaseSession,
   ticker: string,
@@ -110,6 +114,10 @@ export function isPurchaseSessionComplete(session: PurchaseSession | null): bool
 
 export function confirmedPurchaseCount(session: PurchaseSession | null): number {
   return session?.rows.filter((row) => row.status === "confirmed").length ?? 0;
+}
+
+export function isPurchaseSessionEditable(session: PurchaseSession | null): boolean {
+  return Boolean(session && session.rows.every((row) => row.status === "ready" && !row.txHash));
 }
 
 function isPurchaseSession(value: unknown): value is PurchaseSession {
