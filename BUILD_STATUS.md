@@ -1,6 +1,6 @@
 # Gauntlet V1 build status
 
-Updated: September 7, 2026
+Updated: September 8, 2026
 
 ## Working locally
 
@@ -10,37 +10,36 @@ Updated: September 7, 2026
 - Editable $100,000 virtual allocation with exact-total validation.
 - Free virtual drafts saved in the browser without a wallet or deposit.
 - Player desk at `/me` showing the latest lineup, weighted practice return, activity, and battle entry.
-- Practice battle using the saved lineup and allocation-weighted scoring.
+- Refresh-safe practice battles using official Base Chainlink total-return feeds, immutable openings, feed freshness, weighted scoring, ties, and final states.
+- Portable two-browser challenge links sharing one battle identity, opening snapshot, and end time.
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
+- Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
+- Server-enforced location checks on both indicative and executable purchase quotes.
+- A least-privilege Supabase game-record migration and server-only durable challenge API are prepared but not deployed/configured.
 - Public impact dashboard truthfully showing zero until verified mainnet activity is indexed.
 
 ## Submission-critical work left
 
 ### 1. Durable game backend
 
-- Add Supabase tables for profiles, drafts, picks, battles, battle snapshots, and activity.
+- Apply and validate the prepared Supabase tables for drafts, picks, purchase attempts, battles, and battle snapshots.
 - Replace browser-only draft storage with signed server persistence while keeping guest play frictionless.
-- Generate public challenge links and implement opponent join.
+- Wire the existing opponent-join API into the challenge UI after the server secret and migration are installed.
 
 ### 2. Real scoring data
 
-- Read the official Chainlink B20 total-return feeds.
-- Save immutable start snapshots when a battle begins.
-- Recalculate live scores and settle battles idempotently at the end time.
-- Add rematch and shareable result states.
+- Persist live and final snapshots through the durable API and add rematch.
+- Keep the current portable practice fallback labelled as unverified until server records are enabled.
 
 ### 3. Ownership completion
 
 - Mainnet-test minimum viable order sizes for every supported stock.
-- Finish per-stock retry and partial-purchase recovery.
-- Verify post-purchase B20 balances on Base.
-- Build the `VIRTUAL → OWNED` reveal and BaseScan receipt links.
+- Reconcile client recovery records into private server records after wallet authentication.
 - Confirm Builder Code attribution on every supported transaction path.
 
 ### 4. Eligibility and safety
 
 - Add issuer disclosures and legal links.
-- Add location-based US blocking to real purchases while preserving practice mode.
 - Test wallet switching, Base network switching, insufficient USDC, insufficient gas, rejected signatures, and stale quotes.
 
 ### 5. Proof and instrumentation
@@ -54,7 +53,7 @@ Updated: September 7, 2026
 
 - Deploy a production preview with server-side environment variables.
 - Run mobile wallet tests and at least ten uncoached user sessions.
-- Capture leaderboard screenshots, thumbnail, demo battle, and a 75–90 second submission video.
+- Capture result/challenge screenshots, thumbnail, demo battle, and a 75–90 second submission video.
 - Freeze features after the critical loop succeeds repeatedly.
 
 ## Explicitly later
