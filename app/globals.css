@@ -328,6 +328,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .battle-proof { margin-top: 20px; }
 .battle-proof svg { flex: 0 0 auto; color: var(--signal); }
 .battle-proof strong { display: block; margin-bottom: 5px; font: 500 11px/1 var(--font-utility); letter-spacing: .1em; color: var(--signal); }
+.battle-share { margin-top: 4px; }
 
 .data-notice { margin: 0 0 30px; }
 .data-notice svg { color: var(--signal); flex: 0 0 auto; }
@@ -429,6 +430,8 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .battle-lobby { min-height: 390px; display: flex; justify-content: space-between; align-items: end; gap: 40px; padding: clamp(30px,5vw,68px); background: radial-gradient(circle at 18% 18%,color-mix(in srgb,var(--hazard) 7%,transparent),transparent 38%),var(--surface); }
 .battle-lobby > div > strong { display: block; margin-top: 28px; font: 400 clamp(24px,3vw,40px)/1 var(--font-utility); color: var(--signal); }
 .battle-lobby > div > p:last-child { max-width: 600px; margin: 20px 0 0; color: var(--dim); line-height: 1.6; }
+.battle-lobby .battle-data-error { color: var(--signal); }
+.battle-lobby .primary-action:disabled { cursor: wait; opacity: .55; }
 
 @media (max-width: 1050px) {
   .hero { grid-template-columns: 1fr; }
