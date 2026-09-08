@@ -28,7 +28,7 @@ function Battle() {
   const drafts = usePracticeDrafts();
   const draft = drafts[0] ?? null;
   const storedSession = useBattleSession();
-  const activeSession = storedSession && storedSession.challengeCode === challengeCode && remainingBattleSeconds(storedSession) > 0 ? storedSession : null;
+  const activeSession = storedSession && storedSession.challengeCode === challengeCode ? storedSession : null;
   const started = Boolean(activeSession);
   const [remaining, setRemaining] = useState(24 * 60 * 60);
   const [marketPreview, setMarketPreview] = useState<PricePoint[]>([]);
