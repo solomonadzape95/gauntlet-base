@@ -36,6 +36,9 @@ create table if not exists public.purchase_attempts (
 create table if not exists public.battles (
   id uuid primary key default gen_random_uuid(),
   status text not null default 'waiting' check (status in ('waiting', 'active', 'complete')),
+  ownership_status text not null default 'virtual' check (ownership_status in ('virtual', 'owned')),
+  player_wallet_address text,
+  opponent_wallet_address text,
   player_picks jsonb not null,
   opponent_picks jsonb,
   opening_prices jsonb not null,
