@@ -17,6 +17,7 @@ export function SiteHeader() {
       <div className="shell header-inner">
         <Link href="/" className="brand" aria-label="Gauntlet home">
           <Logo />
+          <span>Gauntlet</span>
         </Link>
 
         <nav aria-label="Primary navigation">

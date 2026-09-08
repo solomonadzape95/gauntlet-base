@@ -5,40 +5,32 @@ import { MarketStrip } from "@/components/market-strip";
 
 export default function Home() {
   return (
-    <>
-      <div className="landing">
-        <section className="landing-word landing-play shell">
+    <div className="landing">
+      <MarketStrip />
+
+      <section className="landing-story shell">
+        <div className="landing-statement">
           <p className="eyebrow hazard">THE FANTASY MARKET · FREE TO PLAY</p>
-          <h1>PLAY.</h1>
-          <p>Build a $100,000 virtual portfolio. No wallet. No deposit. Just your read on the market.</p>
-        </section>
+          <h1><span>PLAY.</span><span className="outline-word">OWN.</span></h1>
+        </div>
 
-        <MarketStrip />
-
-        <section className="landing-word landing-own shell">
-          <h2>OWN.</h2>
-          <div className="landing-own-copy">
-            <p className="eyebrow hazard">WHEN YOU ARE READY · POWERED BY BASE</p>
-            <p>Keep playing for free, or optionally buy a small version of your lineup using tokenized stocks [digital tokens that track stock value].</p>
-            <div className="hero-actions">
-              <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>
-              <Link className="secondary-action" href="/battle/demo">WATCH A BATTLE</Link>
-            </div>
+        <div className="landing-pitch">
+          <p className="eyebrow">PRACTICE FIRST · POWERED BY BASE</p>
+          <h2>Build the portfolio before you buy it.</h2>
+          <p>Draft a $100,000 virtual lineup with no wallet or deposit. If you like your call, eligible players can later buy a small version using tokenized stocks [digital tokens that track stock value].</p>
+          <div className="hero-actions">
+            <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>
+            <Link className="secondary-action" href="/battle/demo">WATCH A BATTLE</Link>
           </div>
-        </section>
+        </div>
 
-        <section className="landing-flow shell" aria-label="How Gauntlet works">
-          <FlowStep number="01" title="DRAFT" copy="Choose 3–5 stocks and decide how to allocate your virtual $100K." />
-          <FlowStep number="02" title="PLAY" copy="Save the portfolio and enter a practice battle. Real money is never required." />
-          <FlowStep number="03" title="OWN" copy="If eligible, optionally buy the same weighted portfolio directly to your wallet." />
-        </section>
-      </div>
-
-      <footer className="site-footer shell">
-        <span>GAUNTLET · SEASON 0</span>
-        <span>FREE TO PLAY · ELIGIBLE NON-US USERS ONLY FOR REAL PURCHASES</span>
-      </footer>
-    </>
+        <div className="landing-flow" aria-label="How Gauntlet works">
+          <FlowStep number="01" title="DRAFT" copy="Choose 3–5 stocks." />
+          <FlowStep number="02" title="PLAY" copy="Compete with virtual money." />
+          <FlowStep number="03" title="OWN" copy="Buy only when ready." />
+        </div>
+      </section>
+    </div>
   );
 }
 

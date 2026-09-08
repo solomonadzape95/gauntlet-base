@@ -13,11 +13,23 @@ import { usePracticeDrafts } from "@/lib/use-practice-drafts";
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 export function PlayerDashboard() {
-  const { isConnected } = useAccount();
+  const { isConnected, status } = useAccount();
   const drafts = usePracticeDrafts();
 
   const latest = drafts[0];
   const score = latest ? scoreDraft(latest) : 0;
+
+  if (status === "reconnecting") {
+    return (
+      <div className="dashboard-shell shell page-shell">
+        <section className="dashboard-gate dashboard-panel">
+          <span className="gate-icon"><LockKeyhole size={30} /></span>
+          <p className="eyebrow hazard">PLAYER DESK · WALLET ACCESS</p>
+          <h1>Restoring your wallet session…</h1>
+        </section>
+      </div>
+    );
+  }
 
   if (!isConnected) {
     return (
