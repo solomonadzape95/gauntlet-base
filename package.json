@@ -14,10 +14,11 @@
     "lucide-react": "^0.544.0",
     "motion": "^12.23.0",
     "next": "^16.2.0",
+    "ox": "^1.7.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "simple-icons": "^16.30.0",
-    "viem": "^2.37.0",
+    "viem": "^2.56.3",
     "wagmi": "^2.18.0"
   },
   "devDependencies": {
