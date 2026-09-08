@@ -22,11 +22,12 @@ export function ImpactDashboard() {
   }, []);
 
   const metrics = [
-    ["NEW B20 WALLETS", snapshot.newB20Wallets, "Distinct wallets with a verified owned draft"],
-    ["CONFIRMED PURCHASES", snapshot.confirmedPurchases, "Only balance-verified transactions count"],
-    ["OWNED DRAFTS", snapshot.ownedDrafts, "Every selected balance verified"],
-    ["OWNED BATTLES", snapshot.ownedBattles, "Both players verified"],
+    ["NEW B20 WALLETS", snapshot.newB20Wallets, "Distinct wallets in verified ownership records"],
+    ["CONFIRMED PURCHASES", snapshot.confirmedPurchases, "Requires a transaction hash and recorded balance increase"],
+    ["OWNED DRAFTS", snapshot.ownedDrafts, "Server records marked owned after verification"],
+    ["OWNED BATTLES", snapshot.ownedBattles, "Both players recorded as verified owners"],
   ] as const;
+  const status = getServerStatus(snapshot, loading);
 
   return (
     <div className="shell page-shell impact-page">
@@ -34,7 +35,7 @@ export function ImpactDashboard() {
         <div><p className="eyebrow hazard">PUBLIC PROOF · BASE MAINNET</p><h1>Verified impact</h1></div>
         <p className="heading-aside">This dashboard counts confirmed B20 activity attributed to Gauntlet. Empty numbers remain empty until real transactions exist.</p>
       </header>
-      <div className="data-notice"><RadioTower size={17} /><p><strong>{loading ? "CHECKING INDEX" : snapshot.healthy ? "INDEX ONLINE" : snapshot.configured ? "INDEX UNHEALTHY" : "SERVER INDEX OFFLINE"}</strong>{snapshot.healthy ? ` Last confirmed activity: ${snapshot.lastIndexedAt ? new Date(snapshot.lastIndexedAt).toLocaleString() : "none yet"}.` : " No demonstration data is included in adoption totals."}</p></div>
+      <div className="data-notice"><RadioTower size={17} /><p><strong>{status.label}</strong>{status.detail}</p></div>
       <section className="metric-grid">
         {metrics.map(([label, value, note]) => <article key={label} className="metric-card"><span className="eyebrow">{label}</span><strong>{value}</strong><p>{note}</p></article>)}
       </section>
@@ -50,4 +51,14 @@ export function ImpactDashboard() {
       </section>
     </div>
   );
+}
+
+function getServerStatus(snapshot: ImpactSnapshot, loading: boolean) {
+  if (loading) return { label: "CHECKING SERVER RECORDS", detail: "" };
+  if (!snapshot.healthy) return {
+    label: snapshot.configured ? "SERVER RECORDS UNAVAILABLE" : "SERVER RECORDS OFFLINE",
+    detail: " No demonstration data is included in adoption totals.",
+  };
+  const activity = snapshot.lastIndexedAt ? new Date(snapshot.lastIndexedAt).toLocaleString() : "none yet";
+  return { label: "SERVER RECORDS ONLINE", detail: ` Last recorded confirmation: ${activity}. BaseScan links remain the independent proof.` };
 }

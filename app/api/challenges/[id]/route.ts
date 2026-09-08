@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { hasUsablePrices } from "@/lib/battle-scoring";
-import { isUuid, normalizeLineup, type BattleRecord } from "@/lib/battle-record";
+import { BATTLE_RECORD_SELECTION, createBattleWindow, isUuid, normalizeLineup, type BattleRecord } from "@/lib/battle-record";
 import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
-
-const selection = "id,status,player_picks,opponent_picks,opening_prices,end_prices,starts_at,ends_at,settled_at";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "Durable challenges are not configured yet." }, { status: 503 });
 
-  const found = await supabase.from("battles").select(selection).eq("id", id).maybeSingle<BattleRecord>();
+  const found = await supabase.from("battles").select(BATTLE_RECORD_SELECTION).eq("id", id).maybeSingle<BattleRecord>();
   if (found.error) return NextResponse.json({ error: "The challenge could not be loaded." }, { status: 503 });
   if (!found.data) return NextResponse.json({ error: "That challenge does not exist." }, { status: 404 });
 
@@ -23,12 +21,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const currentPrices = battle.status === "complete" && battle.end_prices ? battle.end_prices : await readChainlinkPrices();
     const tickers = [...battle.player_picks, ...(battle.opponent_picks ?? [])].map((pick) => pick.ticker);
-    if (battle.status !== "complete" && Date.parse(battle.ends_at) <= Date.now() && hasUsablePrices(tickers, currentPrices)) {
+    if (battle.status === "active") {
+      await supabase.from("battle_price_snapshots").insert({ battle_id: id, kind: "current", prices: currentPrices });
+    }
+    if (battle.status === "active" && battle.ends_at && Date.parse(battle.ends_at) <= Date.now() && hasUsablePrices(tickers, currentPrices)) {
       const settled = await supabase.from("battles").update({
         status: "complete",
         end_prices: currentPrices,
         settled_at: new Date().toISOString(),
-      }).eq("id", id).is("end_prices", null).select(selection).maybeSingle<BattleRecord>();
+      }).eq("id", id).is("end_prices", null).select(BATTLE_RECORD_SELECTION).maybeSingle<BattleRecord>();
       if (settled.data) battle = settled.data;
     }
     return NextResponse.json({ battle, currentPrices }, { headers: { "Cache-Control": "no-store" } });
@@ -52,11 +53,30 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ error: "Durable challenges are not configured yet." }, { status: 503 });
 
-  const result = await supabase.from("battles").update({ opponent_picks: picks, status: "active" })
+  let prices;
+  try {
+    prices = await readChainlinkPrices();
+  } catch (cause) {
+    console.error("Could not lock challenge opening prices", cause);
+    return NextResponse.json({ error: "Fresh opening prices are temporarily unavailable." }, { status: 503 });
+  }
+  const tickers = [...picks].map((pick) => pick.ticker);
+  const existing = await supabase.from("battles").select("player_picks").eq("id", id).maybeSingle<{ player_picks: BattleRecord["player_picks"] }>();
+  if (existing.error || !existing.data) return NextResponse.json({ error: "That challenge does not exist." }, { status: existing.error ? 503 : 404 });
+  tickers.push(...existing.data.player_picks.map((pick) => pick.ticker));
+  if (!hasUsablePrices(tickers, prices)) return NextResponse.json({ error: "A fresh opening snapshot is not available for both lineups." }, { status: 503 });
+  const { startsAt, endsAt } = createBattleWindow();
+  const result = await supabase.from("battles").update({
+    opponent_picks: picks,
+    status: "active",
+    opening_prices: prices,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  })
     .eq("id", id)
     .is("opponent_picks", null)
-    .gt("ends_at", new Date().toISOString())
-    .select(selection)
+    .eq("status", "waiting")
+    .select(BATTLE_RECORD_SELECTION)
     .maybeSingle<BattleRecord>();
   if (result.error) return NextResponse.json({ error: "The challenge could not be joined." }, { status: 503 });
   if (!result.data) return NextResponse.json({ error: "This challenge was already joined or has ended." }, { status: 409 });

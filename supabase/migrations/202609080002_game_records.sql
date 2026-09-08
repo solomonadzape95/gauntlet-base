@@ -28,6 +28,8 @@ create table if not exists public.purchase_attempts (
   transaction_hash text,
   balance_before numeric(78,0),
   balance_after numeric(78,0),
+  balance_verified boolean not null default false,
+  confirmed_at timestamptz,
   error_message text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -41,13 +43,14 @@ create table if not exists public.battles (
   opponent_wallet_address text,
   player_picks jsonb not null,
   opponent_picks jsonb,
-  opening_prices jsonb not null,
+  opening_prices jsonb,
   end_prices jsonb,
-  starts_at timestamptz not null default now(),
-  ends_at timestamptz not null,
+  starts_at timestamptz,
+  ends_at timestamptz,
   settled_at timestamptz,
   created_at timestamptz not null default now(),
-  constraint battle_window_valid check (ends_at > starts_at),
+  constraint battle_window_valid check ((status = 'waiting' and starts_at is null and ends_at is null) or (starts_at is not null and ends_at > starts_at)),
+  constraint active_battle_has_opening check (status = 'waiting' or (opening_prices is not null and starts_at is not null and ends_at is not null)),
   constraint completed_battle_has_prices check (status <> 'complete' or (end_prices is not null and settled_at is not null))
 );
 
@@ -80,10 +83,14 @@ security definer
 set search_path = ''
 as $$
 begin
-  if tg_op = 'INSERT' then
+  if tg_op = 'INSERT' and new.opening_prices is not null then
     insert into public.battle_price_snapshots (battle_id, kind, prices, captured_at)
     values (new.id, 'start', new.opening_prices, new.starts_at);
-  elsif old.end_prices is null and new.end_prices is not null then
+  elsif tg_op = 'UPDATE' and old.opening_prices is null and new.opening_prices is not null then
+    insert into public.battle_price_snapshots (battle_id, kind, prices, captured_at)
+    values (new.id, 'start', new.opening_prices, new.starts_at);
+  end if;
+  if tg_op = 'UPDATE' and old.end_prices is null and new.end_prices is not null then
     insert into public.battle_price_snapshots (battle_id, kind, prices, captured_at)
     values (new.id, 'end', new.end_prices, coalesce(new.settled_at, now()));
   end if;
@@ -95,5 +102,27 @@ revoke execute on function public.record_battle_price_snapshot() from public, an
 
 drop trigger if exists battle_price_snapshot_trigger on public.battles;
 create trigger battle_price_snapshot_trigger
-after insert or update of end_prices on public.battles
+after insert or update of opening_prices, end_prices on public.battles
 for each row execute function public.record_battle_price_snapshot();
+
+create or replace function public.set_record_updated_at()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+revoke execute on function public.set_record_updated_at() from public, anon, authenticated;
+
+drop trigger if exists drafts_updated_at_trigger on public.drafts;
+create trigger drafts_updated_at_trigger before update on public.drafts
+for each row execute function public.set_record_updated_at();
+
+drop trigger if exists purchase_attempts_updated_at_trigger on public.purchase_attempts;
+create trigger purchase_attempts_updated_at_trigger before update on public.purchase_attempts
+for each row execute function public.set_record_updated_at();

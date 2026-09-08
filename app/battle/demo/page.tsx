@@ -33,7 +33,11 @@ function Battle() {
   const draft = drafts[0] ?? null;
   const storedSession = useBattleSession();
   const activeSession = storedSession && (
-    serverBattleId ? storedSession.serverBattleId === serverBattleId : storedSession.challengeCode === challengeCode && !storedSession.serverBattleId
+    serverBattleId
+      ? storedSession.serverBattleId === serverBattleId
+      : challengeCode
+        ? storedSession.challengeCode === challengeCode && !storedSession.serverBattleId
+        : true
   ) ? storedSession : null;
   const started = Boolean(activeSession);
   const [remaining, setRemaining] = useState(24 * 60 * 60);
@@ -47,13 +51,11 @@ function Battle() {
   useEffect(() => {
     if (!serverBattleId) return;
     let cancelled = false;
-    fetch(`/api/challenges/${encodeURIComponent(serverBattleId)}`, { cache: "no-store" })
-      .then(async (response) => {
-        const result = await response.json() as { battle?: BattleRecord; currentPrices?: PricePoint[]; error?: string };
-        if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not load this challenge.");
+    fetchDurableBattle(serverBattleId)
+      .then((result) => {
         if (!cancelled) {
           setServerBattle(result.battle);
-          if (result.currentPrices) setMarketPreview(result.currentPrices);
+          setMarketPreview(result.currentPrices);
         }
       })
       .catch((cause) => {
@@ -65,15 +67,22 @@ function Battle() {
 
   const loadMarket = useCallback(async () => {
     const saved = readBattleSession();
-    if (saved?.serverBattleId) {
-      const response = await fetch(`/api/challenges/${encodeURIComponent(saved.serverBattleId)}`, { cache: "no-store" });
-      const result = await response.json() as { battle?: BattleRecord; currentPrices?: PricePoint[]; error?: string };
-      if (!response.ok || !result.battle || !result.currentPrices) throw new Error(result.error ?? "Could not refresh this challenge.");
+    if (saved?.serverBattleId && (!serverBattleId || saved.serverBattleId === serverBattleId)) {
+      const result = await fetchDurableBattle(saved.serverBattleId);
+      if (result.battle.status === "waiting" || !result.battle.opening_prices || !result.battle.starts_at || !result.battle.ends_at) {
+        setServerBattle(result.battle);
+        setMarketPreview(result.currentPrices);
+        return result.currentPrices;
+      }
+      const creator = saved.serverRole !== "opponent";
       const next = {
         ...saved,
-        rivalPicks: result.battle.opponent_picks ?? saved.rivalPicks,
+        playerPicks: creator ? result.battle.player_picks : result.battle.opponent_picks ?? saved.playerPicks,
+        rivalPicks: creator ? result.battle.opponent_picks ?? saved.rivalPicks : result.battle.player_picks,
+        openingPrices: result.battle.opening_prices,
         currentPrices: result.currentPrices,
         endsAt: result.battle.ends_at,
+        startedAt: result.battle.starts_at,
       };
       saveBattleSession(next);
       setServerBattle(result.battle);
@@ -86,19 +95,20 @@ function Battle() {
     setMarketPreview(result.prices);
     updateBattlePrices(result.prices);
     return result.prices;
-  }, []);
+  }, [serverBattleId]);
 
   useEffect(() => {
     if (!started || (activeSession && remainingBattleSeconds(activeSession) === 0)) return;
     const timer = window.setInterval(() => {
       if (activeSession) setRemaining(remainingBattleSeconds(activeSession));
     }, 1000);
-    const marketTimer = window.setInterval(() => void loadMarket().catch(() => setMarketError("The latest feed refresh failed. The last verified prices remain on screen.")), 60_000);
+    const refreshDelay = serverBattle?.status === "waiting" ? 5_000 : 60_000;
+    const marketTimer = window.setInterval(() => void loadMarket().catch(() => setMarketError("The latest feed refresh failed. The last verified prices remain on screen.")), refreshDelay);
     return () => {
       window.clearInterval(timer);
       window.clearInterval(marketTimer);
     };
-  }, [activeSession, loadMarket, started]);
+  }, [activeSession, loadMarket, serverBattle?.status, started]);
 
   const player = draft ?? defaultPracticeDraft();
   const activePlayerPicks: ScoredPick[] = activeSession?.playerPicks ?? player.picks;
@@ -116,6 +126,7 @@ function Battle() {
   const strongestPick = holdings.reduce((best, item) => item[1] > best[1] ? item : best, holdings[0] ?? ["—", 0] as const);
   const canOwnBattleDraft = Boolean(draft && activeSession?.playerDraftId === draft.id);
   const isComplete = Boolean(activeSession && remainingBattleSeconds(activeSession) === 0);
+  const awaitingOpponent = Boolean(activeSession?.serverBattleId && serverBattle?.status === "waiting");
   const isTie = Math.abs(playerScore - rivalScore) < 0.000_001;
   const feedTimestamp = currentPrices.reduce((latest, point) => point.updatedAt > latest ? point.updatedAt : latest, "");
 
@@ -130,15 +141,8 @@ function Battle() {
       if (challenge && Date.parse(challenge.endsAt) <= Date.now()) throw new Error("This challenge has ended. Ask the player for a rematch link.");
       let joinedBattle = serverBattle;
       if (serverBattleId) {
-        const response = await fetch(`/api/challenges/${encodeURIComponent(serverBattleId)}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ picks: player.picks }),
-        });
-        const result = await response.json() as { battle?: BattleRecord; error?: string };
-        if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not join this challenge.");
-        joinedBattle = result.battle;
-        setServerBattle(result.battle);
+        joinedBattle = await joinDurableBattle(serverBattleId, player.picks);
+        setServerBattle(joinedBattle);
       }
       const session = createBattleSession({
         playerDraftId: player.id,
@@ -147,8 +151,9 @@ function Battle() {
         openingPrices: joinedBattle?.opening_prices ?? challenge?.openingPrices ?? prices,
         challengeCode: serverBattleId ? null : challengeCode,
         serverBattleId: serverBattleId ?? null,
+        serverRole: serverBattleId ? "opponent" : null,
         battleId: joinedBattle?.id ?? challenge?.id,
-        endsAt: joinedBattle?.ends_at ?? challenge?.endsAt,
+        endsAt: joinedBattle?.ends_at ?? challenge?.endsAt ?? undefined,
       });
       saveBattleSession(session);
       setRemaining(remainingBattleSeconds(session));
@@ -173,13 +178,11 @@ function Battle() {
       url = `${window.location.origin}/battle/demo?battle=${activeSession.serverBattleId}`;
     } else {
       try {
-        const response = await fetch("/api/challenges", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ picks: activePlayerPicks }),
-        });
-        const result = await response.json() as { battle?: BattleRecord };
-        if (response.ok && result.battle) url = `${window.location.origin}/battle/demo?battle=${result.battle.id}`;
+        const battle = await createDurableBattle(activePlayerPicks);
+        const next = { ...activeSession, serverBattleId: battle.id, serverRole: "creator" as const };
+        saveBattleSession(next);
+        setServerBattle(battle);
+        url = `${window.location.origin}/battle/demo?battle=${battle.id}`;
       } catch {
         // Portable practice links remain available while server persistence is offline.
       }
@@ -220,11 +223,11 @@ function Battle() {
         </section>
       ) : (
         <>
-          <div className="battle-status"><span><Radio size={14} /> {isComplete ? "FINAL · CHAINLINK" : pricesUsable ? "LIVE · CHAINLINK" : "FEED HELD"}{feedTimestamp ? ` · ${new Date(feedTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</span><span><Clock3 size={14} /> {isComplete ? "COMPLETE" : `${formatDuration(remaining)} REMAINING`}</span></div>
+          <div className="battle-status"><span><Radio size={14} /> {awaitingOpponent ? "CHALLENGE OPEN" : isComplete ? "FINAL · CHAINLINK" : pricesUsable ? "LIVE · CHAINLINK" : "FEED HELD"}{feedTimestamp ? ` · ${new Date(feedTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</span><span><Clock3 size={14} /> {awaitingOpponent ? "WAITING FOR OPPONENT" : isComplete ? "COMPLETE" : `${formatDuration(remaining)} REMAINING`}</span></div>
           <section className="versus-grid">
             <Competitor name="YOU" score={playerScore} rank={isTie ? "T" : leading ? "01" : "02"} stocks={holdings} leading={!isTie && leading} />
             <div className="versus-mark">VS</div>
-            <Competitor name={challengerPicks ? "CHALLENGER" : "NOVA"} score={rivalScore} rank={isTie ? "T" : leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
+            <Competitor name={activeSession?.serverRole === "creator" ? "OPPONENT" : challengerPicks ? "CHALLENGER" : "NOVA"} score={rivalScore} rank={isTie ? "T" : leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
               const opening = openingPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               const current = currentPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               return [pick.ticker, priceReturn(opening, current)] as const;
@@ -247,6 +250,37 @@ function formatDuration(seconds: number) {
   const minutes = Math.floor((seconds % 3600) / 60);
   const rest = seconds % 60;
   return [hours, minutes, rest].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
+type DurableBattleResponse = { battle?: BattleRecord; currentPrices?: PricePoint[]; error?: string };
+
+async function fetchDurableBattle(id: string) {
+  const response = await fetch(`/api/challenges/${encodeURIComponent(id)}`, { cache: "no-store" });
+  const result = await response.json() as DurableBattleResponse;
+  if (!response.ok || !result.battle || !result.currentPrices) throw new Error(result.error ?? "Could not load this challenge.");
+  return { battle: result.battle, currentPrices: result.currentPrices };
+}
+
+async function createDurableBattle(picks: ScoredPick[]) {
+  const response = await fetch("/api/challenges", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ picks }),
+  });
+  const result = await response.json() as DurableBattleResponse;
+  if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not create this challenge.");
+  return result.battle;
+}
+
+async function joinDurableBattle(id: string, picks: ScoredPick[]) {
+  const response = await fetch(`/api/challenges/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ picks }),
+  });
+  const result = await response.json() as DurableBattleResponse;
+  if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not join this challenge.");
+  return result.battle;
 }
 
 function Competitor({ name, score, rank, stocks, leading = false }: { name: string; score: number; rank: string; stocks: readonly (readonly [string, number])[]; leading?: boolean }) {

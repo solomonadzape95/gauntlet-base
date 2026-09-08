@@ -8,6 +8,7 @@ export type BattleSession = {
   id: string;
   challengeCode: string | null;
   serverBattleId: string | null;
+  serverRole: "creator" | "opponent" | null;
   playerDraftId: string;
   playerPicks: ScoredPick[];
   rivalPicks: ScoredPick[];
@@ -25,6 +26,7 @@ export function createBattleSession(input: {
   now?: Date;
   challengeCode?: string | null;
   serverBattleId?: string | null;
+  serverRole?: "creator" | "opponent" | null;
   battleId?: string;
   endsAt?: string;
 }): BattleSession {
@@ -34,6 +36,7 @@ export function createBattleSession(input: {
     id: input.battleId ?? `battle-${now.getTime().toString(36)}`,
     challengeCode: input.challengeCode ?? null,
     serverBattleId: input.serverBattleId ?? null,
+    serverRole: input.serverRole ?? null,
     playerDraftId: input.playerDraftId,
     playerPicks: input.playerPicks,
     rivalPicks: input.rivalPicks,
@@ -54,7 +57,8 @@ export function parseBattleSession(snapshot: string | null): BattleSession | nul
     if (!isPrices(value.openingPrices) || !isPrices(value.currentPrices)) return null;
     if (value.challengeCode !== undefined && value.challengeCode !== null && typeof value.challengeCode !== "string") return null;
     if (value.serverBattleId !== undefined && value.serverBattleId !== null && typeof value.serverBattleId !== "string") return null;
-    return { ...value, challengeCode: value.challengeCode ?? null, serverBattleId: value.serverBattleId ?? null } as BattleSession;
+    if (value.serverRole !== undefined && value.serverRole !== null && value.serverRole !== "creator" && value.serverRole !== "opponent") return null;
+    return { ...value, challengeCode: value.challengeCode ?? null, serverBattleId: value.serverBattleId ?? null, serverRole: value.serverRole ?? null } as BattleSession;
   } catch {
     return null;
   }

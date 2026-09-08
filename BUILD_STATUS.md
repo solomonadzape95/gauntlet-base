@@ -15,8 +15,8 @@ Updated: September 8, 2026
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
 - Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
 - Server-enforced location checks on both indicative and executable purchase quotes.
-- A least-privilege Supabase game-record migration and server-only durable challenge API are prepared but not deployed/configured.
-- Public impact dashboard truthfully showing zero until verified mainnet activity is indexed.
+- A least-privilege Supabase game-record migration and durable challenge UI/API are prepared but not deployed/configured.
+- Public impact dashboard truthfully showing zero until balance-verified server records exist, with BaseScan links as independent proof.
 
 ## Submission-critical work left
 
@@ -24,7 +24,7 @@ Updated: September 8, 2026
 
 - Apply and validate the prepared Supabase tables for drafts, picks, purchase attempts, battles, and battle snapshots.
 - Replace browser-only draft storage with signed server persistence while keeping guest play frictionless.
-- Wire the existing opponent-join API into the challenge UI after the server secret and migration are installed.
+- Install the server secret, apply the migration, then validate creator/opponent synchronization against the live project.
 
 ### 2. Real scoring data
 

@@ -6,12 +6,21 @@ export type BattleRecord = {
   status: "waiting" | "active" | "complete";
   player_picks: ScoredPick[];
   opponent_picks: ScoredPick[] | null;
-  opening_prices: PricePoint[];
+  opening_prices: PricePoint[] | null;
   end_prices: PricePoint[] | null;
-  starts_at: string;
-  ends_at: string;
+  starts_at: string | null;
+  ends_at: string | null;
   settled_at: string | null;
 };
+
+export const BATTLE_RECORD_SELECTION = "id,status,player_picks,opponent_picks,opening_prices,end_prices,starts_at,ends_at,settled_at";
+
+export function createBattleWindow(now = new Date()) {
+  return {
+    startsAt: now.toISOString(),
+    endsAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
 
 export function normalizeLineup(value: unknown): ScoredPick[] | null {
   if (!Array.isArray(value) || value.length < 3 || value.length > 5) return null;

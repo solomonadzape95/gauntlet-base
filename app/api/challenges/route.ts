@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { hasUsablePrices } from "@/lib/battle-scoring";
-import { normalizeLineup, type BattleRecord } from "@/lib/battle-record";
-import { readChainlinkPrices } from "@/lib/chainlink-market";
-import { STOCKS } from "@/lib/stocks";
+import { BATTLE_RECORD_SELECTION, normalizeLineup, type BattleRecord } from "@/lib/battle-record";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -25,19 +22,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const prices = await readChainlinkPrices();
-    if (!hasUsablePrices(STOCKS.map((stock) => stock.ticker), prices)) {
-      return NextResponse.json({ error: "A fresh opening snapshot is not available for every supported stock." }, { status: 503 });
-    }
-    const startsAt = new Date();
-    const endsAt = new Date(startsAt.getTime() + 24 * 60 * 60 * 1000);
     const result = await supabase.from("battles").insert({
       status: "waiting",
       player_picks: picks,
-      opening_prices: prices,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-    }).select("id,status,player_picks,opponent_picks,opening_prices,end_prices,starts_at,ends_at,settled_at").single<BattleRecord>();
+      opening_prices: null,
+      starts_at: null,
+      ends_at: null,
+    }).select(BATTLE_RECORD_SELECTION).single<BattleRecord>();
 
     if (result.error) throw result.error;
     return NextResponse.json({ battle: result.data }, { status: 201 });
