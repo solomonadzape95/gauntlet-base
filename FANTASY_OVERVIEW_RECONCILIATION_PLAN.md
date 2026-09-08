@@ -98,6 +98,16 @@ Nebulas contributes structure, not its brand palette:
 
 ## Delivery plan
 
+### Implementation checkpoint — 2026-09-08
+
+- Complete: recoverable per-stock purchase state, receipt checks, post-transaction B20 balance verification, and BaseScan receipts.
+- Complete: server-enforced purchase eligibility on preview and executable quote routes, with a development-only country override.
+- Complete: official Base Chainlink total-return feed integration, weighted scoring, freshness state/timestamp, refresh-safe 24-hour practice sessions, ties, and final state.
+- Complete for practice mode: challenge URLs carry one battle identity, opening feed snapshot, lineup, and end time so a second browser joins the same scoring window.
+- Complete: contextual ownership route restores the exact saved draft without rebuilding it.
+- Remaining before public submission claims: Supabase-backed drafts/purchase attempts/battles, signed or server-stored public challenge records, end-to-end wallet purchase tests at real minimum sizes, share image metadata, analytics/indexing, and live `/impact` aggregates.
+- Deliberate limitation: local practice links are portable but not tamper-proof. They must not be presented as verified public results until the server record/signature work is complete.
+
 ### Phase 0 — Freeze the submission contract (30 minutes)
 
 1. Freeze the ten-stock allowlist; do not add catalogue breadth.

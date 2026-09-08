@@ -23,17 +23,19 @@ export function createBattleSession(input: {
   openingPrices: PricePoint[];
   now?: Date;
   challengeCode?: string | null;
+  battleId?: string;
+  endsAt?: string;
 }): BattleSession {
   const now = input.now ?? new Date();
   return {
     version: 1,
-    id: `battle-${now.getTime().toString(36)}`,
+    id: input.battleId ?? `battle-${now.getTime().toString(36)}`,
     challengeCode: input.challengeCode ?? null,
     playerDraftId: input.playerDraftId,
     playerPicks: input.playerPicks,
     rivalPicks: input.rivalPicks,
     startedAt: now.toISOString(),
-    endsAt: new Date(now.getTime() + BATTLE_DURATION_MS).toISOString(),
+    endsAt: input.endsAt ?? new Date(now.getTime() + BATTLE_DURATION_MS).toISOString(),
     openingPrices: input.openingPrices,
     currentPrices: input.openingPrices,
   };

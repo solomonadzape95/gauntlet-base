@@ -23,7 +23,8 @@ export default function DemoBattlePage() {
 function Battle() {
   const searchParams = useSearchParams();
   const challengeCode = searchParams.get("challenge");
-  const challengerPicks = useMemo(() => decodeChallenge(challengeCode), [challengeCode]);
+  const challenge = useMemo(() => decodeChallenge(challengeCode), [challengeCode]);
+  const challengerPicks = challenge?.picks ?? null;
   const drafts = usePracticeDrafts();
   const draft = drafts[0] ?? null;
   const storedSession = useBattleSession();
@@ -47,7 +48,7 @@ function Battle() {
   }, []);
 
   useEffect(() => {
-    if (!started) return;
+    if (!started || (activeSession && remainingBattleSeconds(activeSession) === 0)) return;
     const timer = window.setInterval(() => {
       if (activeSession) setRemaining(remainingBattleSeconds(activeSession));
     }, 1000);
@@ -73,6 +74,9 @@ function Battle() {
   });
   const strongestPick = holdings.reduce((best, item) => item[1] > best[1] ? item : best, holdings[0] ?? ["—", 0] as const);
   const canOwnBattleDraft = Boolean(draft && activeSession?.playerDraftId === draft.id);
+  const isComplete = Boolean(activeSession && remainingBattleSeconds(activeSession) === 0);
+  const isTie = Math.abs(playerScore - rivalScore) < 0.000_001;
+  const feedTimestamp = currentPrices.reduce((latest, point) => point.updatedAt > latest ? point.updatedAt : latest, "");
 
   async function enterBattle() {
     setLoadingMarket(true);
@@ -82,12 +86,15 @@ function Battle() {
       if (!hasUsablePrices(battleTickers, prices)) {
         throw new Error("A required feed is held or stale. Start the battle when fresh market data resumes.");
       }
+      if (challenge && Date.parse(challenge.endsAt) <= Date.now()) throw new Error("This challenge has ended. Ask the player for a rematch link.");
       const session = createBattleSession({
         playerDraftId: player.id,
         playerPicks: player.picks,
         rivalPicks: activeRivalPicks,
-        openingPrices: prices,
+        openingPrices: challenge?.openingPrices ?? prices,
         challengeCode,
+        battleId: challenge?.id,
+        endsAt: challenge?.endsAt,
       });
       saveBattleSession(session);
       setRemaining(remainingBattleSeconds(session));
@@ -99,7 +106,13 @@ function Battle() {
   }
 
   async function copyChallenge() {
-    const code = encodeChallenge(activePlayerPicks);
+    if (!activeSession) return;
+    const code = encodeChallenge({
+      id: activeSession.id,
+      endsAt: activeSession.endsAt,
+      picks: activePlayerPicks,
+      openingPrices: activeSession.openingPrices,
+    });
     const url = `${window.location.origin}/battle/demo?challenge=${code}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
@@ -124,19 +137,19 @@ function Battle() {
         </section>
       ) : (
         <>
-          <div className="battle-status"><span><Radio size={14} /> {pricesUsable ? "LIVE · CHAINLINK" : "FEED HELD"}</span><span><Clock3 size={14} /> {formatDuration(remaining)} REMAINING</span></div>
+          <div className="battle-status"><span><Radio size={14} /> {isComplete ? "FINAL · CHAINLINK" : pricesUsable ? "LIVE · CHAINLINK" : "FEED HELD"}{feedTimestamp ? ` · ${new Date(feedTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</span><span><Clock3 size={14} /> {isComplete ? "COMPLETE" : `${formatDuration(remaining)} REMAINING`}</span></div>
           <section className="versus-grid">
-            <Competitor name="YOU" score={playerScore} rank={leading ? "01" : "02"} stocks={holdings} leading={leading} />
+            <Competitor name="YOU" score={playerScore} rank={isTie ? "T" : leading ? "01" : "02"} stocks={holdings} leading={!isTie && leading} />
             <div className="versus-mark">VS</div>
-            <Competitor name={challengerPicks ? "CHALLENGER" : "NOVA"} score={rivalScore} rank={leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
+            <Competitor name={challengerPicks ? "CHALLENGER" : "NOVA"} score={rivalScore} rank={isTie ? "T" : leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
               const opening = openingPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               const current = currentPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               return [pick.ticker, priceReturn(opening, current)] as const;
-            })} leading={!leading} />
+            })} leading={!isTie && !leading} />
           </section>
           <section className="battle-proof"><ShieldCheck size={20} /><div><strong>CHAINLINK TOTAL-RETURN SCORE</strong><p>This battle uses virtual funds and official Base feed addresses. Owning stocks is optional and never changes the score.{marketError ? ` ${marketError}` : ""}</p></div></section>
           <section className="battle-conversion dashboard-panel">
-            <div><p className="eyebrow hazard">YOUR LINEUP IN PRACTICE</p><h2>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}% SO FAR.</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
+            <div><p className="eyebrow hazard">{isComplete ? "FINAL LINEUP RESULT" : "LIVE LINEUP CHECKPOINT"}</p><h2>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}% {isComplete ? "FINAL." : "SO FAR."}</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
             <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
           </section>
           <button className="secondary-action battle-share" onClick={() => void copyChallenge()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
