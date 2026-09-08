@@ -6,7 +6,8 @@ import { ArrowRight, Check, Clock3, Copy, Radio, ShieldCheck, TrendingDown, Tren
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { hasUsablePrices, priceReturn, scoreLineup, type PricePoint, type ScoredPick } from "@/lib/battle-scoring";
-import { createBattleSession, remainingBattleSeconds, saveBattleSession, updateBattlePrices } from "@/lib/battle-session";
+import { createBattleSession, readBattleSession, remainingBattleSeconds, saveBattleSession, updateBattlePrices } from "@/lib/battle-session";
+import type { BattleRecord } from "@/lib/battle-record";
 import { decodeChallenge, encodeChallenge } from "@/lib/challenge-code";
 import { defaultPracticeDraft } from "@/lib/practice-game";
 import { useBattleSession } from "@/lib/use-battle-session";
@@ -23,22 +24,62 @@ export default function DemoBattlePage() {
 function Battle() {
   const searchParams = useSearchParams();
   const challengeCode = searchParams.get("challenge");
+  const serverBattleId = searchParams.get("battle");
   const challenge = useMemo(() => decodeChallenge(challengeCode), [challengeCode]);
-  const challengerPicks = challenge?.picks ?? null;
+  const [serverBattle, setServerBattle] = useState<BattleRecord | null>(null);
+  const [serverLoading, setServerLoading] = useState(Boolean(serverBattleId));
+  const challengerPicks = serverBattle?.player_picks ?? challenge?.picks ?? null;
   const drafts = usePracticeDrafts();
   const draft = drafts[0] ?? null;
   const storedSession = useBattleSession();
-  const activeSession = storedSession && storedSession.challengeCode === challengeCode ? storedSession : null;
+  const activeSession = storedSession && (
+    serverBattleId ? storedSession.serverBattleId === serverBattleId : storedSession.challengeCode === challengeCode && !storedSession.serverBattleId
+  ) ? storedSession : null;
   const started = Boolean(activeSession);
   const [remaining, setRemaining] = useState(24 * 60 * 60);
   const [marketPreview, setMarketPreview] = useState<PricePoint[]>([]);
   const [marketError, setMarketError] = useState<string | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(false);
-  const [shareState, setShareState] = useState<"idle" | "copied" | "shared">("idle");
+  const [shareState, setShareState] = useState<"idle" | "creating" | "copied" | "shared">("idle");
   const openingPrices = activeSession?.openingPrices ?? [];
   const currentPrices = activeSession?.currentPrices ?? marketPreview;
 
+  useEffect(() => {
+    if (!serverBattleId) return;
+    let cancelled = false;
+    fetch(`/api/challenges/${encodeURIComponent(serverBattleId)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json() as { battle?: BattleRecord; currentPrices?: PricePoint[]; error?: string };
+        if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not load this challenge.");
+        if (!cancelled) {
+          setServerBattle(result.battle);
+          if (result.currentPrices) setMarketPreview(result.currentPrices);
+        }
+      })
+      .catch((cause) => {
+        if (!cancelled) setMarketError(cause instanceof Error ? cause.message : "Could not load this challenge.");
+      })
+      .finally(() => { if (!cancelled) setServerLoading(false); });
+    return () => { cancelled = true; };
+  }, [serverBattleId]);
+
   const loadMarket = useCallback(async () => {
+    const saved = readBattleSession();
+    if (saved?.serverBattleId) {
+      const response = await fetch(`/api/challenges/${encodeURIComponent(saved.serverBattleId)}`, { cache: "no-store" });
+      const result = await response.json() as { battle?: BattleRecord; currentPrices?: PricePoint[]; error?: string };
+      if (!response.ok || !result.battle || !result.currentPrices) throw new Error(result.error ?? "Could not refresh this challenge.");
+      const next = {
+        ...saved,
+        rivalPicks: result.battle.opponent_picks ?? saved.rivalPicks,
+        currentPrices: result.currentPrices,
+        endsAt: result.battle.ends_at,
+      };
+      saveBattleSession(next);
+      setServerBattle(result.battle);
+      setMarketPreview(result.currentPrices);
+      return result.currentPrices;
+    }
     const response = await fetch("/api/market", { cache: "no-store" });
     const result = await response.json() as { prices?: PricePoint[]; error?: string };
     if (!response.ok || !result.prices) throw new Error(result.error ?? "Could not read Base market data.");
@@ -87,14 +128,27 @@ function Battle() {
         throw new Error("A required feed is held or stale. Start the battle when fresh market data resumes.");
       }
       if (challenge && Date.parse(challenge.endsAt) <= Date.now()) throw new Error("This challenge has ended. Ask the player for a rematch link.");
+      let joinedBattle = serverBattle;
+      if (serverBattleId) {
+        const response = await fetch(`/api/challenges/${encodeURIComponent(serverBattleId)}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ picks: player.picks }),
+        });
+        const result = await response.json() as { battle?: BattleRecord; error?: string };
+        if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not join this challenge.");
+        joinedBattle = result.battle;
+        setServerBattle(result.battle);
+      }
       const session = createBattleSession({
         playerDraftId: player.id,
         playerPicks: player.picks,
-        rivalPicks: activeRivalPicks,
-        openingPrices: challenge?.openingPrices ?? prices,
-        challengeCode,
-        battleId: challenge?.id,
-        endsAt: challenge?.endsAt,
+        rivalPicks: joinedBattle?.player_picks ?? activeRivalPicks,
+        openingPrices: joinedBattle?.opening_prices ?? challenge?.openingPrices ?? prices,
+        challengeCode: serverBattleId ? null : challengeCode,
+        serverBattleId: serverBattleId ?? null,
+        battleId: joinedBattle?.id ?? challenge?.id,
+        endsAt: joinedBattle?.ends_at ?? challenge?.endsAt,
       });
       saveBattleSession(session);
       setRemaining(remainingBattleSeconds(session));
@@ -107,15 +161,32 @@ function Battle() {
 
   async function shareChallenge() {
     if (!activeSession) return;
+    setShareState("creating");
     const code = encodeChallenge({
       id: activeSession.id,
       endsAt: activeSession.endsAt,
       picks: activePlayerPicks,
       openingPrices: activeSession.openingPrices,
     });
-    const url = `${window.location.origin}/battle/demo?challenge=${code}`;
+    let url = `${window.location.origin}/battle/demo?challenge=${code}`;
+    if (activeSession.serverBattleId) {
+      url = `${window.location.origin}/battle/demo?battle=${activeSession.serverBattleId}`;
+    } else {
+      try {
+        const response = await fetch("/api/challenges", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ picks: activePlayerPicks }),
+        });
+        const result = await response.json() as { battle?: BattleRecord };
+        if (response.ok && result.battle) url = `${window.location.origin}/battle/demo?battle=${result.battle.id}`;
+      } catch {
+        // Portable practice links remain available while server persistence is offline.
+      }
+    }
     if (navigator.share) {
       try {
+        setShareState("idle");
         await navigator.share({ title: "Gauntlet practice battle", text: "Run your lineup against mine on Gauntlet.", url });
         setShareState("shared");
         window.setTimeout(() => setShareState("idle"), 1800);
@@ -128,6 +199,8 @@ function Battle() {
     setShareState("copied");
     window.setTimeout(() => setShareState("idle"), 1800);
   }
+
+  if (serverLoading) return <div className="shell page-shell"><p className="eyebrow hazard">LOADING SERVER CHALLENGE…</p></div>;
 
   return (
     <div className="shell page-shell battle-page">
@@ -162,7 +235,7 @@ function Battle() {
             <div><p className="eyebrow hazard">{isComplete ? "FINAL LINEUP RESULT" : "LIVE LINEUP CHECKPOINT"}</p><h2>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}% {isComplete ? "FINAL." : "SO FAR."}</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
             <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
           </section>
-          <button className="secondary-action battle-share" onClick={() => void shareChallenge()}>{shareState === "idle" ? <Copy size={15} /> : <Check size={15} />}{shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
+          <button className="secondary-action battle-share" disabled={shareState === "creating"} onClick={() => void shareChallenge()}>{shareState === "idle" || shareState === "creating" ? <Copy size={15} /> : <Check size={15} />}{shareState === "creating" ? "CREATING CHALLENGE…" : shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
         </>
       )}
     </div>
