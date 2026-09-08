@@ -12,15 +12,20 @@ export type BattleRecord = {
   starts_at: string | null;
   ends_at: string | null;
   settled_at: string | null;
+  duration_minutes: 60 | 1440;
 };
 
-export const BATTLE_RECORD_SELECTION = "id,status,player_picks,opponent_picks,opening_prices,end_prices,starts_at,ends_at,settled_at";
+export const BATTLE_RECORD_SELECTION = "id,status,player_picks,opponent_picks,opening_prices,end_prices,starts_at,ends_at,settled_at,duration_minutes";
 
-export function createBattleWindow(now = new Date()) {
+export function createBattleWindow(now = new Date(), durationMinutes: 60 | 1440 = 1440) {
   return {
     startsAt: now.toISOString(),
-    endsAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    endsAt: new Date(now.getTime() + durationMinutes * 60 * 1000).toISOString(),
   };
+}
+
+export function normalizeBattleDuration(value: unknown): 60 | 1440 | null {
+  return value === 60 || value === 1440 ? value : null;
 }
 
 export function normalizeLineup(value: unknown): ScoredPick[] | null {

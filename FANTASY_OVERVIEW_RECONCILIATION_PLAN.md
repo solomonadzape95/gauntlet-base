@@ -6,7 +6,7 @@
 
 ## Decision in one sentence
 
-Keep Gauntlet's current `draft -> own -> head-to-head battle -> proof` thesis and its existing Gauntlet-colour/Nebulas-structure design; adopt the source document's contextual conversion prompt and share card, but reject its arbitrary salary cap, generic global leaderboard, mocked social filler, fake-token fallback, and third-party geo service.
+Keep Gauntlet's current `draft -> own -> compete -> proof` thesis and its existing Gauntlet-colour/Nebulas-structure design; adopt the source document's contextual conversion prompt, scheduled leaderboard, and share card, but reject its arbitrary salary cap, mocked social filler, fake-token fallback, and third-party geo service.
 
 ## The product we should submit
 
@@ -39,7 +39,7 @@ This includes the useful insight from the source document—conversion feels str
 | Stock universe | 15–20 familiar generic tickers | 10 allowlisted official B20 contracts | **Keep current.** Contract truth and tested liquidity matter more than catalogue size. Add stocks only after address, feed, disclosure, decimals, and quote tests pass. | No change |
 | Market data | Finnhub/Alpha Vantage/Yahoo and page-refresh scoring | Static practice values now; official Chainlink B20 total-return feeds planned | **Use the current architecture, finish the integration.** One official feed should power battle snapshots and results. Do not add a second market-data vendor for the core score. | Large, P0 |
 | Score window | Since draft time | Since battle start, allocation-weighted | **Keep current.** A fixed challenge start is fairer and reproducible. A solo practice return may begin at draft lock, but battle scoring begins when both sides are ready. | Negligible |
-| Competition format | Global leaderboard | One-to-one Stock Battles | **Keep current for submission.** Head-to-head challenges are more distinctive, invite another user, and fit the existing brand. A global board is not required to make the product feel like a game. | No change |
+| Competition format | Global leaderboard | One-to-one Stock Battles | **Use both with clear jobs.** Game Weeks provide the main recurring competition and fair shared scoring window; direct challenges remain the social invite/rematch loop. Avoid an undated all-time vanity board. | Add scheduled Game Weeks |
 | Conversion timing | Prompt after standings using the best-performing pick | Ownership offered immediately after allocation | **Adopt both moments.** Keep immediate ownership, then repeat a contextual conversion card after a practice result. Do not use counterfactual profit copy as a pressure tactic. | Medium, P0 |
 | Conversion execution | Simulated acceptable; testnet stretch | Real Base Mainnet B20 acquisition is the core claim | **Keep current. Never simulate ownership.** If multi-stock minimums fail, use the documented one-stock Anchor fallback and label it honestly. | Large, P0 verification |
 | Eligibility | Self-attestation plus third-party IP API | Self-attestation only; server location gate planned | **Adopt the gate, change the mechanism.** Use Vercel's request geolocation at quote/purchase boundaries, fail closed for US, preserve practice mode, and keep the declaration/disclosures. No extra geo vendor. | Medium, P0 |
@@ -48,7 +48,7 @@ This includes the useful insight from the source document—conversion feels str
 | Reactions/trash talk | Suggested social feature | Explicitly excluded | **Reject for submission.** It needs moderation, identity, and persistence while adding little to verified adoption. | No change |
 | “X is buzzing” ticker | Mocked trend flavour | Not present | **Reject.** Fake live data damages the proof-first product. | No change |
 | Private leagues | Stretch | Public challenge URLs planned | **Keep challenges, skip leagues.** The invite loop exists without league management. | No change |
-| Public proof | Not central | `/impact` is a first-class surface | **Keep and finish current.** It is a stronger judging artifact than a generic leaderboard. | Large, P0 |
+| Public proof | Not central | `/impact` is a first-class surface | **Keep and finish current.** Impact proves adoption while the Game Week leaderboard proves competition; neither should impersonate the other. | Large, P0 |
 | Visual style | Generic “clean card” guidance | Gauntlet identity using Nebulas dashboard structure | **Keep current.** Use the source only for product beats, never as visual direction. | No change |
 
 ## Visual contract
@@ -106,7 +106,7 @@ Nebulas contributes structure, not its brand palette:
 - Complete for practice mode: challenge URLs carry one battle identity, opening feed snapshot, lineup, and end time so a second browser joins the same scoring window.
 - Complete: contextual ownership route restores the exact saved draft without rebuilding it.
 - Remaining before public submission claims: Supabase-backed drafts/purchase attempts/battles, signed or server-stored public challenge records, end-to-end wallet purchase tests at real minimum sizes, share image metadata, analytics/indexing, and live `/impact` aggregates.
-- Deliberate limitation: local practice links are portable but not tamper-proof. They must not be presented as verified public results until the server record/signature work is complete.
+- Practice battles are deliberately local and unshareable. Every public challenge/result URL must resolve to an existing server record.
 
 ### Phase 0 — Freeze the submission contract (30 minutes)
 
@@ -206,7 +206,7 @@ If time collapses, ship in this order:
 2. **Game proof:** persisted draft plus one reproducible practice result using official feed data.
 3. **Growth proof:** shareable result/challenge URL and image.
 4. **Nice to have:** live opponent joining, timed settlement, rematch.
-5. **Cut:** global leaderboard, reactions, trash talk, leagues, trend ticker, weekly recap, extra stocks, custom token, testnet theatre.
+5. **Cut:** undated all-time leaderboard, reactions, trash talk, leagues, trend ticker, weekly recap, extra stocks, custom token, testnet theatre.
 
 If multi-stock mainnet purchasing remains unreliable, use the Anchor Stock fallback and say exactly that. A smaller real loop is a better submission than a broad simulated one.
 
@@ -232,7 +232,7 @@ If multi-stock mainnet purchasing remains unreliable, use the Anchor Stock fallb
 
 ## Explicitly deferred
 
-- Global leaderboard
+- Undated all-time leaderboard
 - Reactions, comments, or trash talk
 - Private leagues and seasons
 - “Trending on X” data

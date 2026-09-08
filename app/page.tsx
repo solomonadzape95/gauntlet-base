@@ -20,7 +20,7 @@ export default function Home() {
           <p>Draft a $1,000 virtual team with no wallet or deposit. If you like your call, eligible players can later buy a small version using tokenized stocks [digital tokens that track stock value].</p>
           <div className="hero-actions">
             <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>
-            <Link className="secondary-action" href="/battle/demo">WATCH A BATTLE</Link>
+            <Link className="secondary-action" href="/battle">OPEN BATTLE DESK</Link>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, BarChart3, LayoutDashboard, Swords } from "lucide-react";
+import { Activity, BarChart3, LayoutDashboard, Swords, Trophy } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { WalletButton } from "@/components/wallet-button";
@@ -7,7 +7,8 @@ import { WalletButton } from "@/components/wallet-button";
 const links = [
   { href: "/draft", label: "Draft", icon: Swords },
   { href: "/me", label: "Desk", icon: LayoutDashboard },
-  { href: "/battle/demo", label: "Battle", icon: Activity },
+  { href: "/battle", label: "Battle", icon: Activity },
+  { href: "/leaderboard", label: "Ranks", icon: Trophy },
   { href: "/impact", label: "Impact", icon: BarChart3 },
 ];
 

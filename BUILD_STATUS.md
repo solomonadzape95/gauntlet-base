@@ -11,7 +11,9 @@ Updated: September 8, 2026
 - Free virtual teams saved through a private account/guest API, with browser fallback when persistence is unavailable.
 - Player desk at `/me` showing the latest lineup, weighted practice return, activity, and battle entry.
 - Refresh-safe practice battles using official Base Chainlink total-return feeds, immutable openings, feed freshness, weighted scoring, ties, and final states.
-- Portable two-browser challenge links sharing one battle identity, opening snapshot, and end time.
+- Durable two-browser challenge links with account/guest-bound roles and selectable one-hour or 24-hour windows.
+- Explicit battle desk separating fresh solo practice from durable friend challenges.
+- Scheduled Game Week entries, immutable team snapshots, performance points, and a week-specific leaderboard.
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
 - Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
 - Server-enforced location checks on both indicative and executable purchase quotes.
@@ -23,14 +25,15 @@ Updated: September 8, 2026
 
 ### 1. Durable game backend
 
-- Apply `202609080004_active_teams.sql`, then validate one active $1,000 team per signed-in account and guest browser.
-- Bind durable battle creator/opponent roles to account or guest identities so a player cannot accept their own challenge.
+- Apply migrations `202609080004_active_teams.sql` through `202609080006_game_weeks.sql` in order.
 - Validate creator/opponent synchronization and deduplicated funnel events against the live project.
+- Validate Game Week entry locking, shared opening prices, live ranking, and final settlement against the live project.
+- Configure a scheduler to `POST /api/game-weeks/tick` with `Authorization: Bearer $GAME_WEEK_CRON_SECRET` at least once per minute around market boundaries.
 
 ### 2. Real scoring data
 
 - Persist live and final snapshots through the durable API and add rematch.
-- Keep the current portable practice fallback labelled as unverified until server records are enabled.
+- Verify scheduled boundary calls capture fresh opening and closing snapshots within the accepted timing tolerance.
 
 ### 3. Ownership completion
 

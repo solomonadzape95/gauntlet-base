@@ -270,6 +270,8 @@ The product's retention loop [the reason a player comes back] is the rematch, no
 | `/draft/[id]/own` | Own My Draft | Eligibility, amount, wallet, quotes, purchases | P0 |
 | `/draft/[id]/reveal` | Ownership reveal | Verify balances and create the emotional payoff | P0 |
 | `/battle/[id]` | Battle | Join, follow, and complete a battle | P0 |
+| `/battle` | Battle desk | Choose solo practice or create a timed friend challenge | P0 |
+| `/leaderboard` | Game Week leaderboard | Enter one team snapshot and rank weighted weekly performance | P0 |
 | `/me` | Player dashboard | Drafts, holdings used in game, battles, activity | P1 |
 | `/impact` | Public proof dashboard | Show verified adoption and transactions | P0 |
 | `/how-it-works` | Explanation | Explain virtual play, ownership, scoring, and risk | P1 |

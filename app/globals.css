@@ -449,6 +449,31 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .battle-lobby > div > p:last-child { max-width: 600px; margin: 20px 0 0; color: var(--dim); line-height: 1.6; }
 .battle-lobby .battle-data-error { color: var(--signal); }
 .battle-lobby .primary-action:disabled { cursor: wait; opacity: .55; }
+.battle-choice-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+.battle-choice-card { min-height: 440px; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(28px,4vw,48px); }
+.battle-choice-card.featured { border-color: color-mix(in srgb,var(--hazard) 42%,var(--edge)); background: radial-gradient(circle at 88% 12%,color-mix(in srgb,var(--hazard) 10%,transparent),transparent 34%),var(--surface); }
+.battle-choice-card > svg { color: var(--hazard); margin-bottom: 48px; }
+.battle-choice-card h2 { margin: 12px 0 16px; font: 700 clamp(28px,3vw,42px)/1 var(--font-display); text-transform: uppercase; }
+.battle-choice-card > p:not(.eyebrow,.battle-data-error,.team-ready) { max-width: 520px; color: var(--dim); line-height: 1.6; }
+.battle-choice-card > .primary-action, .battle-choice-card > .secondary-action { margin-top: auto; }
+.duration-picker { display: flex; gap: 8px; margin: 26px 0 14px; }
+.duration-picker button { display: flex; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid var(--edge); background: transparent; color: var(--dim); font: 500 9px/1 var(--font-utility); letter-spacing: .1em; }
+.duration-picker button.active { border-color: var(--hazard); color: var(--hazard); background: color-mix(in srgb,var(--hazard) 8%,transparent); }
+.team-ready { margin: 4px 0 18px; color: var(--signal); font: 500 10px/1.4 var(--font-utility); letter-spacing: .08em; }
+.leaderboard-hero { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 22px; padding: clamp(28px,4vw,48px); border-color: color-mix(in srgb,var(--hazard) 32%,var(--edge)); }
+.leaderboard-hero h2 { margin: 14px 0; color: var(--hazard); font: 700 clamp(28px,4vw,48px)/.95 var(--font-display); }
+.leaderboard-hero p:not(.eyebrow) { max-width: 760px; color: var(--dim); line-height: 1.6; }
+.leaderboard-hero .primary-action, .leaderboard-hero .status-chip { grid-column: 1 / -1; justify-self: start; }
+.week-clock { display: flex; align-items: center; gap: 8px; color: var(--signal); font: 500 10px/1.3 var(--font-utility); letter-spacing: .08em; }
+.leaderboard-table { margin-top: 18px; overflow: hidden; }
+.leaderboard-row { display: grid; grid-template-columns: 70px minmax(0,1fr) 120px 120px; align-items: center; gap: 20px; padding: 20px 24px; border-bottom: 1px solid var(--edge); }
+.leaderboard-row:last-child { border-bottom: 0; }
+.leaderboard-row.heading { padding-block: 13px; color: var(--faint); font: 500 9px/1 var(--font-utility); letter-spacing: .1em; }
+.leaderboard-row > span strong, .leaderboard-row > span small { display: block; }
+.leaderboard-row > span small { margin-top: 6px; color: var(--faint); font: 500 9px/1 var(--font-utility); letter-spacing: .06em; }
+.leaderboard-rank { color: var(--hazard); font: 400 22px/1 var(--font-utility); }
+.leaderboard-points { color: var(--signal); font: 400 24px/1 var(--font-utility); }
+.leaderboard-empty { display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 180px; padding: 30px; color: var(--dim); text-align: center; }
 
 @media (max-width: 1050px) {
   .hero { grid-template-columns: 1fr; }
@@ -543,6 +568,10 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
   .gate-actions { width: 100%; flex-direction: column; }
   .gate-actions .primary-action, .gate-actions .secondary-action { width: 100%; }
   .practice-notice, .battle-lobby { align-items: stretch; flex-direction: column; }
+  .battle-choice-grid { grid-template-columns: 1fr; }
+  .leaderboard-hero { grid-template-columns: 1fr; }
+  .leaderboard-row { grid-template-columns: 46px minmax(0,1fr) 82px; }
+  .leaderboard-row > :nth-child(3) { display: none; }
   .battle-conversion { align-items: stretch; flex-direction: column; }
   .battle-lobby .primary-action { width: 100%; }
 }

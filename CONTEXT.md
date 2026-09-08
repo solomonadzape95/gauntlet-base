@@ -19,3 +19,15 @@ An invitation created from the challenger's battle lineup. The recipient must br
 ## Virtual budget
 
 The fixed $1,000 allocation used to weight a team and calculate its return. It is neither a deposit nor spendable money.
+
+## Game Week
+
+A scheduled market competition with an entry lock, a fixed start, and a fixed end. Each player may enter once with an immutable snapshot of their active team.
+
+## Performance Points
+
+The Game Week score: a 1,000-point baseline plus one point for every basis point of allocation-weighted portfolio return, with a floor of zero. _Avoid_: activity points, engagement points.
+
+## Leaderboard
+
+The ranking of entries within one Game Week by Performance Points. _Avoid_: an undated global or all-time ranking.

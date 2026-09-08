@@ -85,7 +85,7 @@ export function PlayerDashboard() {
             <Swords size={34} />
             <h2>Put the team to work.</h2>
             <p>Enter a free practice battle. Your score follows percentage performance, not how much money you own.</p>
-            <Link className="primary-action full" href="/battle/demo">START PRACTICE BATTLE <ArrowRight size={16} /></Link>
+            <Link className="primary-action full" href="/battle">CHOOSE A BATTLE <ArrowRight size={16} /></Link>
             <Link className="dashboard-text-link" href="/draft">OR EDIT YOUR TEAM</Link>
           </section>
 

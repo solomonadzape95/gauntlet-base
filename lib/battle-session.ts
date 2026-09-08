@@ -87,6 +87,12 @@ export function saveBattleSession(session: BattleSession) {
   window.dispatchEvent(new Event("gauntlet:battle-changed"));
 }
 
+export function clearBattleSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(BATTLE_SESSION_KEY);
+  window.dispatchEvent(new Event("gauntlet:battle-changed"));
+}
+
 export function updateBattlePrices(prices: PricePoint[]) {
   const session = readBattleSession();
   if (!session) return null;
