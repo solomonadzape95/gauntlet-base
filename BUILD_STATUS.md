@@ -1,17 +1,18 @@
 # Gauntlet V1 build status
 
-Updated: September 8, 2026
+Updated: September 9, 2026
 
 ## Working locally
 
-- Simple landing loop: `PLAY → market strip → OWN`.
+- Plain-language landing loop with a user-scrollable live onchain market strip and no simulated market labels.
 - Three-to-five stock selection with centered, brand-colour dither logos.
 - Logo-local dither pulse on selection.
 - One active team per player, assembled from server-derived onchain Draft Costs within a 1,000-credit Squad Budget.
 - Team headquarters at `/draft` with Squad, Transfers, and Market views, Bank, current points, player identity, and responsive layouts.
 - Transfer-window locking during active Game Weeks, one free incoming stock, and 25-point deductions for later transfers.
 - Free virtual teams saved through a private account/guest API, with browser fallback when persistence is unavailable.
-- Player desk at `/me` showing the latest lineup, weighted practice return, activity, and battle entry.
+- Combined Player hub at `/me` for the current team, useful destinations, wallet identity, username, and avatar; `/profile` redirects into it.
+- Address-bound wallet profile verification using a one-time signature, without depending on Supabase's Web3 auth provider.
 - Refresh-safe practice battles using official Base Chainlink total-return feeds, immutable openings, feed freshness, weighted scoring, ties, and final states.
 - Durable two-browser challenge links with account/guest-bound roles and selectable one-hour or 24-hour windows.
 - Explicit battle desk separating fresh solo practice from durable friend challenges.
@@ -29,7 +30,7 @@ Updated: September 8, 2026
 
 ### 1. Durable game backend
 
-- Apply migrations `202609080004_active_teams.sql` through `202609080007_team_economy_and_leagues.sql` in order.
+- Apply any pending migrations through `202609080008_wallet_profiles.sql` in filename order. Migration `007` enables leagues; `008` enables wallet profiles without the Supabase Web3 provider.
 - Validate creator/opponent synchronization and deduplicated funnel events against the live project.
 - Validate Game Week entry locking, shared opening prices, live ranking, and final settlement against the live project.
 - Validate server-priced transfers, active-week locking, penalty propagation, league creation, and two-account joining against the live project.

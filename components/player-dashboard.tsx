@@ -1,112 +1,37 @@
 "use client";
 
+import { ArrowRight, Shield, Swords, Trophy } from "lucide-react";
 import Link from "next/link";
-import { ArrowRight, CircleDot, Clock3, LockKeyhole, Swords, Trophy } from "lucide-react";
 import { useAccount } from "wagmi";
 
+import { GauntletLoader } from "@/components/gauntlet-loader";
+import { ProfilePanel } from "@/components/profile-panel";
 import { StockLogo } from "@/components/stock-logo";
 import { WalletButton } from "@/components/wallet-button";
-import { MARKET_QUOTES, scoreDraft } from "@/lib/practice-game";
 import { getStock } from "@/lib/stocks";
 import { useActiveTeam } from "@/lib/use-active-team";
 
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-
 export function PlayerDashboard() {
   const { isConnected, status } = useAccount();
-  const { team: latest } = useActiveTeam();
-  const score = latest ? scoreDraft(latest) : 0;
+  const { team, loading } = useActiveTeam();
 
-  if (status === "reconnecting") {
-    return (
-      <div className="dashboard-shell shell page-shell">
-        <section className="dashboard-gate dashboard-panel">
-          <span className="gate-icon"><LockKeyhole size={30} /></span>
-          <p className="eyebrow hazard">PLAYER DESK · WALLET ACCESS</p>
-          <h1>Restoring your wallet session…</h1>
-        </section>
-      </div>
-    );
-  }
+  if (status === "reconnecting") return <div className="dashboard-shell shell page-shell"><GauntletLoader label="RESTORING PLAYER" /></div>;
 
   if (!isConnected) {
-    return (
-      <div className="dashboard-shell shell page-shell">
-        <section className="dashboard-gate dashboard-panel">
-          <span className="gate-icon"><LockKeyhole size={30} /></span>
-          <p className="eyebrow hazard">PLAYER DESK · WALLET ACCESS</p>
-          <h1>Connect to enter your desk.</h1>
-          <p>Connect a wallet to open the dashboard. You can still draft and play practice battles without one.</p>
-          <div className="gate-actions">
-            <WalletButton />
-            <Link className="secondary-action" href="/draft">PLAY WITHOUT A WALLET</Link>
-          </div>
-        </section>
-      </div>
-    );
+    return <div className="dashboard-shell shell page-shell"><section className="dashboard-gate dashboard-panel"><p className="eyebrow hazard">PLAYER</p><h1>Your team, name and wallet.</h1><p>Connect to manage your player. You can still draft and play for free without connecting.</p><div className="gate-actions"><WalletButton /><Link className="secondary-action" href="/draft">PLAY WITHOUT A WALLET</Link></div></section></div>;
   }
 
-  return (
-    <div className="dashboard-shell shell page-shell">
-      <header className="dashboard-titlebar">
-        <div><p className="eyebrow hazard">PLAYER DESK · PRACTICE MODE</p><h1>Your market room</h1></div>
-        <Link className="primary-action" href="/draft">EDIT TEAM <ArrowRight size={16} /></Link>
-      </header>
+  if (loading) return <div className="dashboard-shell shell page-shell"><GauntletLoader label="LOADING PLAYER" /></div>;
 
-      <section className="dashboard-metrics">
-        <Metric label="TEAM BUDGET" value={latest ? "$1,000" : "—"} note="Virtual · no deposit" />
-        <Metric label="PRACTICE RETURN" value={latest ? `${score >= 0 ? "+" : ""}${score.toFixed(2)}%` : "—"} note="Simulated market feed" signal />
-        <Metric label="ACTIVE TEAM" value={latest ? `${latest.picks.length} PICKS` : "—"} note="Used in future battles" />
-        <Metric label="BATTLE RECORD" value={latest ? "0–0" : "—"} note="Start your first match" />
-      </section>
+  return <div className="dashboard-shell shell page-shell player-hub">
+    <header className="dashboard-titlebar"><div><p className="eyebrow hazard">PLAYER</p><h1>Your hub</h1></div><Link className="primary-action" href="/draft">MANAGE TEAM <ArrowRight size={16} /></Link></header>
 
-      {latest ? (
-        <div className="dashboard-grid">
-          <section className="dashboard-panel portfolio-card">
-            <div className="panel-heading"><div><p className="eyebrow">CURRENT LINEUP</p><h2>Virtual portfolio</h2></div><span className="status-chip"><span /> LIVE</span></div>
-            <div className="dashboard-holdings">
-              {latest.picks.map((pick) => {
-                const stock = getStock(pick.ticker);
-                const quote = MARKET_QUOTES.find((item) => item.ticker === pick.ticker);
-                if (!stock || !quote) return null;
-                return (
-                  <div key={pick.ticker}>
-                    <span className={`holding-logo ${pick.ticker === "SNDKc" ? "wide-logo" : ""}`} style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span>
-                    <span><strong>{stock.company}</strong><small>{pick.ticker} · {money.format(pick.virtualAmount)}</small></span>
-                    <strong className={quote.change >= 0 ? "up" : "down"}>{quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)}%</strong>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+    <section className="dashboard-panel player-team-card">
+      <div className="panel-heading"><div><p className="eyebrow">YOUR TEAM</p><h2>{team ? `${team.picks.length} STOCKS` : "NO TEAM YET"}</h2></div>{!team && <Link className="primary-action" href="/draft">DRAFT NOW <ArrowRight size={16} /></Link>}</div>
+      {team && <div className="dashboard-holdings">{team.picks.map((pick) => { const stock = getStock(pick.ticker); if (!stock) return null; return <div key={pick.ticker}><span className="holding-logo" style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span><span><strong>{stock.company}</strong><small>{pick.ticker}</small></span><strong>{pick.virtualAmount} CR</strong></div>; })}</div>}
+      <div className="player-quick-actions"><Link href="/battle"><Swords size={18} /><span><strong>BATTLE</strong><small>Challenge a friend</small></span></Link><Link href="/leaderboard"><Trophy size={18} /><span><strong>GAME WEEK</strong><small>See your points</small></span></Link><Link href="/leagues"><Shield size={18} /><span><strong>LEAGUES</strong><small>Play with a group</small></span></Link></div>
+    </section>
 
-          <section className="dashboard-panel battle-launcher">
-            <p className="eyebrow">NEXT MOVE</p>
-            <Swords size={34} />
-            <h2>Put the team to work.</h2>
-            <p>Enter a free practice battle. Your score follows percentage performance, not how much money you own.</p>
-            <Link className="primary-action full" href="/battle">CHOOSE A BATTLE <ArrowRight size={16} /></Link>
-            <Link className="dashboard-text-link" href="/draft">OR EDIT YOUR TEAM</Link>
-          </section>
-
-          <section className="dashboard-panel activity-card">
-            <div className="panel-heading"><div><p className="eyebrow">ACTIVITY</p><h2>Game log</h2></div><Clock3 size={18} /></div>
-            <div className="activity-row"><CircleDot size={14} /><span><strong>TEAM SAVED</strong><small>{new Date(latest.createdAt).toLocaleString()}</small></span><span>VIRTUAL</span></div>
-            <div className="activity-row muted"><Trophy size={14} /><span><strong>FIRST BATTLE</strong><small>Ready when you are</small></span><span>OPEN</span></div>
-          </section>
-        </div>
-      ) : (
-        <section className="dashboard-empty dashboard-panel">
-          <Swords size={36} />
-          <h2>Your desk is waiting.</h2>
-          <p>Create a free virtual lineup. A wallet and real money are never required to play.</p>
-          <Link className="primary-action" href="/draft">BUILD YOUR FIRST TEAM <ArrowRight size={16} /></Link>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function Metric({ label, value, note, signal = false }: { label: string; value: string; note: string; signal?: boolean }) {
-  return <article><span className="eyebrow">{label}</span><strong className={signal ? "signal" : ""}>{value}</strong><p>{note}</p></article>;
+    <ProfilePanel embedded />
+  </div>;
 }

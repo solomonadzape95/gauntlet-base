@@ -5,6 +5,7 @@ import { BATTLE_RECORD_SELECTION, createBattleWindow, isUuid, normalizeLineup, t
 import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isSameBrowserGuest, isSamePlayer, readActiveTeam, resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
+import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +23,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const role = isSamePlayer(identity, found.data.creator_user_id, found.data.creator_guest_hash)
     ? "creator"
     : isSamePlayer(identity, found.data.opponent_user_id, found.data.opponent_guest_hash) ? "opponent" : "visitor";
-  const playerIds = [found.data.creator_user_id, found.data.opponent_user_id].filter((value): value is string => Boolean(value));
-  const profiles = playerIds.length ? await supabase.from("profiles").select("user_id,username").in("user_id", playerIds) : { data: [] as { user_id: string; username: string }[] };
-  const profileNames = new Map((profiles.data ?? []).map((profile) => [profile.user_id, profile.username]));
+  const creatorReference = { owner_user_id: found.data.creator_user_id, guest_session_hash: found.data.creator_guest_hash };
+  const opponentReference = { owner_user_id: found.data.opponent_user_id, guest_session_hash: found.data.opponent_guest_hash };
+  const profiles = await readPlayerPresentations(supabase, [creatorReference, opponentReference]);
   const players = {
-    creator: found.data.creator_user_id ? profileNames.get(found.data.creator_user_id) ?? "Verified player" : `Guest ${found.data.creator_guest_hash?.slice(0, 4).toUpperCase()}`,
-    opponent: found.data.opponent_user_id ? profileNames.get(found.data.opponent_user_id) ?? "Verified player" : found.data.opponent_guest_hash ? `Guest ${found.data.opponent_guest_hash.slice(0, 4).toUpperCase()}` : "Opponent",
+    creator: profiles.get(playerReferenceKey(creatorReference))?.username ?? fallbackPlayerName(creatorReference),
+    opponent: found.data.opponent_user_id || found.data.opponent_guest_hash ? profiles.get(playerReferenceKey(opponentReference))?.username ?? fallbackPlayerName(opponentReference) : "Opponent",
   };
 
   let battle: BattleRecord = toPublicBattle(found.data);

@@ -29,6 +29,7 @@ type AuthStatus = "loading" | "idle" | "signing" | "authenticated" | "error";
 type AuthContextValue = {
   session: Session | null;
   profile: GauntletProfile | null;
+  verified: boolean;
   status: AuthStatus;
   error: string | null;
   authenticate: (connector: Connector) => Promise<boolean>;
@@ -44,6 +45,19 @@ export function GauntletAuthProvider({ children }: { children: React.ReactNode }
   const [profile, setProfile] = useState<GauntletProfile | null>(null);
   const [status, setStatus] = useState<AuthStatus>(() => getSupabase() ? "loading" : "idle");
   const [error, setError] = useState<string | null>(null);
+
+  const loadWalletProfile = useCallback(async () => {
+    try {
+      const response = await fetch("/api/profile", { cache: "no-store" });
+      const result = await response.json() as { profile?: GauntletProfile | null; verified?: boolean };
+      if (response.ok && result.profile) {
+        setProfile(result.profile);
+        setStatus("authenticated");
+        return true;
+      }
+    } catch { /* A wallet can still connect while profile persistence is unavailable. */ }
+    return false;
+  }, []);
 
   const loadProfile = useCallback(async (activeSession: Session | null) => {
     const supabase = getSupabase();
@@ -70,21 +84,23 @@ export function GauntletAuthProvider({ children }: { children: React.ReactNode }
       if (!active) return;
       setSession(data.session);
       setStatus(data.session ? "authenticated" : "idle");
-      void loadProfile(data.session);
+      if (data.session) void loadProfile(data.session);
+      else void loadWalletProfile();
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) return;
       setSession(nextSession);
       setStatus(nextSession ? "authenticated" : "idle");
-      void loadProfile(nextSession);
+      if (nextSession) void loadProfile(nextSession);
+      else void loadWalletProfile();
     });
 
     return () => {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [loadProfile]);
+  }, [loadProfile, loadWalletProfile]);
 
   useEffect(() => {
     if (walletStatus === "reconnecting" || address || !session) return;
@@ -109,48 +125,44 @@ export function GauntletAuthProvider({ children }: { children: React.ReactNode }
       const connectorAccounts = await connector.getAccounts();
       const signingAddress = address || connectorAccounts[0];
       if (!signingAddress) throw new Error("Connect the wallet before verifying it.");
-      const walletProvider = provider as Record<"request" | "on" | "removeListener", (...args: never[]) => unknown>;
+      const walletProvider = provider as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> };
+      const nonceResponse = await fetch(`/api/profile/nonce?address=${encodeURIComponent(signingAddress)}`, { cache: "no-store" });
+      const nonceResult = await nonceResponse.json() as { message?: string; error?: string };
+      if (!nonceResponse.ok || !nonceResult.message) throw new Error(nonceResult.error ?? "Could not start wallet verification.");
+      const signature = await walletProvider.request({ method: "personal_sign", params: [nonceResult.message, signingAddress] });
+      if (typeof signature !== "string") throw new Error("The wallet did not return a signature.");
+      const verifyResponse = await fetch("/api/profile/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ address: signingAddress, signature }) });
+      const verifyResult = await verifyResponse.json() as { profile?: GauntletProfile; error?: string };
+      if (!verifyResponse.ok || !verifyResult.profile) throw new Error(verifyResult.error ?? "Could not verify this wallet.");
 
-      const credentials = {
-        chain: "ethereum",
-        wallet: {
-          address: signingAddress,
-          request: walletProvider.request.bind(walletProvider),
-          on: walletProvider.on?.bind(walletProvider),
-          removeListener: walletProvider.removeListener?.bind(walletProvider),
-        },
-        statement: "Sign in to Gauntlet. This proves you control this wallet and does not move funds.",
-      } as unknown as Parameters<typeof supabase.auth.signInWithWeb3>[0];
-      const result = await supabase.auth.signInWithWeb3(credentials);
-      if (result.error) throw result.error;
-
-      setSession(result.data.session);
+      setProfile(verifyResult.profile);
       setStatus("authenticated");
-      await loadProfile(result.data.session);
       return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not verify this wallet.");
       setStatus("error");
       return false;
     }
-  }, [address, loadProfile]);
+  }, [address]);
 
   const saveProfile = useCallback(async (username: string, avatarTone: AvatarTone) => {
     const supabase = getSupabase();
-    if (!supabase || !session || !address) return { ok: false, error: "Verify your wallet first." };
+    if (!supabase || !address) return { ok: false, error: "Verify your wallet first." };
 
     const cleanName = username.trim();
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(cleanName)) {
       return { ok: false, error: "Use 3–20 letters, numbers, or underscores." };
     }
 
-    const result = await supabase.from("profiles").upsert({
-      user_id: session.user.id,
-      wallet_address: address.toLowerCase(),
-      username: cleanName,
-      avatar_tone: avatarTone,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" }).select().single<GauntletProfile>();
+    if (!session) {
+      const response = await fetch("/api/profile", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: cleanName, avatarTone }) });
+      const result = await response.json() as { profile?: GauntletProfile; error?: string };
+      if (!response.ok || !result.profile) return { ok: false, error: result.error ?? "Could not save profile." };
+      setProfile(result.profile);
+      return { ok: true };
+    }
+
+    const result = await supabase.from("profiles").upsert({ user_id: session.user.id, wallet_address: address.toLowerCase(), username: cleanName, avatar_tone: avatarTone, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).select().single<GauntletProfile>();
 
     if (result.error) {
       const message = result.error.code === "23505" ? "That username is already taken." : result.error.message;
@@ -162,14 +174,19 @@ export function GauntletAuthProvider({ children }: { children: React.ReactNode }
   }, [address, session]);
 
   const signOut = useCallback(async () => {
+    if (!session) await fetch("/api/profile", { method: "DELETE" }).catch(() => undefined);
     setProfile(null);
     setSession(null);
     setError(null);
     setStatus("idle");
     await getSupabase()?.auth.signOut();
-  }, []);
+  }, [session]);
 
-  const value = useMemo(() => ({ session, profile, status, error, authenticate, saveProfile, signOut }), [authenticate, error, profile, saveProfile, session, signOut, status]);
+  const walletProfileMatches = Boolean(profile && address && profile.wallet_address.toLowerCase() === address.toLowerCase());
+  const activeProfile = session || walletProfileMatches ? profile : null;
+  const verified = Boolean(session || activeProfile);
+  const activeStatus = !session && profile && !walletProfileMatches ? "idle" : status;
+  const value = useMemo(() => ({ session, profile: activeProfile, verified, status: activeStatus, error, authenticate, saveProfile, signOut }), [activeProfile, activeStatus, authenticate, error, saveProfile, session, signOut, verified]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

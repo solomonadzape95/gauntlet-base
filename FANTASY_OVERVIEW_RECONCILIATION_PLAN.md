@@ -114,6 +114,15 @@ Nebulas contributes structure, not its brand palette:
 - Remaining before public submission claims: apply the latest migration, run two-account live validation, test wallet purchases at real minimum sizes, configure settlement scheduling, and add analytics/indexing plus live `/impact` aggregates.
 - Practice battles are deliberately local and unshareable. Every public challenge/result URL must resolve to an existing server record.
 
+### Corrective product pass — 2026-09-09
+
+- Replaced the Supabase Web3-provider dependency with an address-bound nonce/signature profile session. The new `202609080008_wallet_profiles.sql` migration must be applied before profile verification can succeed.
+- Combined Desk and Profile into one `/me` Player hub; `/profile` now redirects to `/me#profile`. Draft, Battle, Ranks, Leagues, and Impact remain separate because each has a distinct user job.
+- Added active navigation states, the Gauntlet-coloured loader, broader dither treatment, real player avatars, cleaner team rows, and the compact timer-only active-battle header.
+- Made over-budget experimentation possible in Draft and Transfers: Bank may go negative while selection remains editable, but server and client confirmation remain blocked until the team is within 1,000 credits.
+- Replaced the landing autoplay/simulated strip with user-controlled scrolling over the live onchain feed and simplified the hero and steps for first-time users.
+- Deliberately did not add decorative performance graphs. Historical charts become valuable only after timestamped score snapshots are persisted; drawing them from fabricated series would contradict the proof-first product.
+
 ### Product expansion checkpoint — 2026-09-08
 
 - `/draft` becomes the team headquarters after the first team is saved, with Squad, Transfers, and Market views.

@@ -195,8 +195,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     setSelected((current) => {
       if (current.includes(ticker)) return current.filter((item) => item !== ticker);
       const cost = draftMarket.find((item) => item.ticker === ticker)?.draftCost ?? 0;
-      const spent = current.reduce((sum, item) => sum + (draftMarket.find((quote) => quote.ticker === item)?.draftCost ?? 0), 0);
-      return current.length < MAX_PICKS && cost > 0 && spent + cost <= VIRTUAL_BUDGET ? [...current, ticker] : current;
+      return current.length < MAX_PICKS && cost > 0 ? [...current, ticker] : current;
     });
   };
 
@@ -469,7 +468,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   stock={stock}
                   selected={selected.includes(stock.ticker)}
                   draftCost={draftMarket.find((item) => item.ticker === stock.ticker)?.draftCost}
-                  disabled={marketState !== "live" || (!selected.includes(stock.ticker) && (selected.length === MAX_PICKS || selected.reduce((sum, item) => sum + (draftMarket.find((quote) => quote.ticker === item)?.draftCost ?? 0), 0) + (draftMarket.find((quote) => quote.ticker === stock.ticker)?.draftCost ?? VIRTUAL_BUDGET + 1) > VIRTUAL_BUDGET))}
+                  disabled={marketState !== "live" || (!selected.includes(stock.ticker) && selected.length === MAX_PICKS)}
                   onSelect={() => toggle(stock.ticker)}
                 />
               ))}

@@ -45,7 +45,7 @@ export function WalletButton({ compact = false }: { compact?: boolean }) {
     return (
       <div className={controlClass}>
         <button className={`${buttonClass} connected-trigger`} onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-          <DitherAvatar seed={`${name}:${address.slice(-6)}`} tone={auth.profile?.avatar_tone} size={26} />
+          <DitherAvatar seed={name} tone={auth.profile?.avatar_tone} size={26} />
           <span>{auth.status === "signing" ? "VERIFYING…" : name}</span>
         </button>
 
@@ -56,22 +56,22 @@ export function WalletButton({ compact = false }: { compact?: boolean }) {
                 <motion.button className="wallet-scrim" aria-label="Close wallet menu" onClick={close} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
                 <motion.aside className="account-panel" initial={{ opacity: 0, scale: .94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: .96, y: 8 }} transition={{ duration: .18 }}>
                   <div className="account-identity">
-                    <DitherAvatar seed={`${name}:${address.slice(-6)}`} tone={auth.profile?.avatar_tone} size={52} />
+                    <DitherAvatar seed={name} tone={auth.profile?.avatar_tone} size={52} />
                     <div><strong>{auth.profile?.username || "Unnamed player"}</strong><span>{shortAddress(address)}</span></div>
                   </div>
                   <div className="account-status">
                     <span><small>NETWORK</small><strong>BASE</strong></span>
-                    <span><small>PROFILE</small><strong className={auth.session ? "up" : "down"}>{auth.session ? "VERIFIED" : "UNVERIFIED"}</strong></span>
+                    <span><small>PROFILE</small><strong className={auth.verified ? "up" : "down"}>{auth.verified ? "VERIFIED" : "UNVERIFIED"}</strong></span>
                   </div>
                   {auth.error && <p className="wallet-error account-error">{auth.error}</p>}
-                  {!auth.session && connector && (
+                  {!auth.verified && connector && (
                     <button className="account-verify" onClick={() => void auth.authenticate(connector)} disabled={auth.status === "signing"}>
                       <Wallet size={15} /> {auth.status === "signing" ? "CHECK YOUR WALLET…" : "VERIFY WALLET"}
                     </button>
                   )}
                   <div className="account-links">
-                    <Link href="/profile" onClick={close}><User size={16} /> PROFILE</Link>
-                    <Link href="/me" onClick={close}><LayoutDashboard size={16} /> PLAYER DESK</Link>
+                    <Link href="/me#profile" onClick={close}><User size={16} /> EDIT PROFILE</Link>
+                    <Link href="/me" onClick={close}><LayoutDashboard size={16} /> PLAYER HUB</Link>
                     <button onClick={() => void copy()}>{copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "COPIED" : "COPY ADDRESS"}</button>
                     <button className="danger" onClick={() => void disconnectAll()}><LogOut size={16} /> DISCONNECT</button>
                   </div>

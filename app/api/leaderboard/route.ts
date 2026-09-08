@@ -5,6 +5,7 @@ import { normalizeLineup } from "@/lib/battle-record";
 import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { rankGameWeek, scoreGameWeek } from "@/lib/game-week";
 import { isSamePlayer, readActiveTeam, resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
+import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -45,9 +46,7 @@ export async function GET(request: NextRequest) {
   const rows = await supabase.from("game_week_entries").select("id,owner_user_id,guest_session_hash,lineup,joined_at,final_return_bps,final_points,transfer_penalty_points").eq("game_week_id", week.id).returns<GameWeekEntry[]>();
   if (rows.error) return NextResponse.json({ error: "Could not load game-week entries." }, { status: 503 });
 
-  const userIds = rows.data.flatMap((entry) => entry.owner_user_id ? [entry.owner_user_id] : []);
-  const profiles = userIds.length ? await supabase.from("profiles").select("user_id,username").in("user_id", userIds) : { data: [] as { user_id: string; username: string }[] };
-  const names = new Map((profiles.data ?? []).map((profile) => [profile.user_id, profile.username]));
+  const profiles = await readPlayerPresentations(supabase, rows.data);
   let currentPrices = week.closing_prices ?? week.opening_prices ?? [];
   let marketDataStatus: "pending" | "live" | "held" | "final" = week.status === "complete" ? "final" : week.status === "upcoming" ? "pending" : "held";
   if (week.status === "active") {
@@ -67,7 +66,7 @@ export async function GET(request: NextRequest) {
       : null;
     return {
       id: entry.id,
-      name: entry.owner_user_id ? names.get(entry.owner_user_id) ?? "Verified player" : `Guest ${entry.guest_session_hash?.slice(0, 4).toUpperCase()}`,
+      name: profiles.get(playerReferenceKey(entry))?.username ?? fallbackPlayerName(entry),
       picks: entry.lineup.map((pick) => pick.ticker),
       returnPercent: live?.returnPercent ?? null,
       returnBps: live?.returnBps ?? null,

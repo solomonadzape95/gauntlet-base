@@ -5,6 +5,7 @@ import { hasUsablePrices, type PricePoint, type ScoredPick } from "@/lib/battle-
 import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { scoreGameWeek } from "@/lib/game-week";
 import { resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
+import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +26,7 @@ export async function GET(request: NextRequest) {
   if (!ids.length) return withPlayerCookie(NextResponse.json({ leagues: [] }), identity);
   const leagues = await supabase.from("leagues").select("id,name,join_code,created_at").in("id", ids).order("created_at", { ascending: false }).returns<League[]>();
   const members = await supabase.from("league_members").select("league_id,owner_user_id,guest_session_hash,joined_at").in("league_id", ids).returns<Member[]>();
-  const userIds = [...new Set((members.data ?? []).flatMap((member) => member.owner_user_id ? [member.owner_user_id] : []))];
-  const profiles = userIds.length ? await supabase.from("profiles").select("user_id,username,avatar_tone").in("user_id", userIds) : { data: [] as { user_id: string; username: string; avatar_tone: string }[] };
-  const names = new Map((profiles.data ?? []).map((profile) => [profile.user_id, profile]));
+  const profiles = await readPlayerPresentations(supabase, members.data ?? []);
   const recentWeeks = await supabase.from("game_weeks").select("id,status,starts_at,opening_prices,closing_prices").order("starts_at", { ascending: false }).limit(8).returns<LeagueWeek[]>();
   const availableWeeks = recentWeeks.data ?? [];
   const latestWeek = availableWeeks.find((week) => week.status === "active")
@@ -54,8 +53,8 @@ export async function GET(request: NextRequest) {
   const payload = (leagues.data ?? []).map((league) => ({
     ...league,
     members: (members.data ?? []).filter((member) => member.league_id === league.id).map((member) => ({
-      name: member.owner_user_id ? names.get(member.owner_user_id)?.username ?? "Verified player" : `Guest ${member.guest_session_hash?.slice(0, 4).toUpperCase()}`,
-      tone: member.owner_user_id ? names.get(member.owner_user_id)?.avatar_tone ?? "hazard" : "hazard",
+      name: profiles.get(playerReferenceKey(member))?.username ?? fallbackPlayerName(member),
+      tone: profiles.get(playerReferenceKey(member))?.avatarTone ?? "hazard",
       joinedAt: member.joined_at,
       teamEntryId: entryPoints.get(member.owner_user_id ? `user:${member.owner_user_id}` : `guest:${member.guest_session_hash}`)?.id ?? null,
       points: entryPoints.get(member.owner_user_id ? `user:${member.owner_user_id}` : `guest:${member.guest_session_hash}`)?.points ?? null,

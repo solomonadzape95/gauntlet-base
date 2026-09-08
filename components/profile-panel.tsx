@@ -12,7 +12,7 @@ import { useActiveTeam } from "@/lib/use-active-team";
 
 const shortAddress = (address: string) => `${address.slice(0, 8)}…${address.slice(-6)}`;
 
-export function ProfilePanel() {
+export function ProfilePanel({ embedded = false }: { embedded?: boolean }) {
   const { address, connector, isConnected } = useAccount();
   const auth = useGauntletAuth();
   const { team } = useActiveTeam();
@@ -38,19 +38,19 @@ export function ProfilePanel() {
     );
   }
 
-  if (!auth.session) {
+  if (!auth.verified) {
     return (
       <div className="profile-page shell page-shell">
         <section className="dashboard-gate dashboard-panel">
           <span className="gate-icon"><ShieldCheck size={30} /></span>
-          <p className="eyebrow hazard">ONE LAST STEP</p>
-          <h1>Verify this wallet.</h1>
-          <p>Sign a free message [a digital proof, not a transaction] so Supabase can securely tie this profile to your wallet.</p>
+          <p className="eyebrow hazard">PLAYER NAME</p>
+          <h1>Sign once to save your name.</h1>
+          <p>This free signature proves the connected wallet is yours. It cannot move money.</p>
           <div className="gate-actions">
             <button className="primary-action" disabled={!connector || auth.status === "signing"} onClick={() => connector && void auth.authenticate(connector)}>
               <Wallet size={16} /> {auth.status === "signing" ? "CHECK YOUR WALLET…" : "VERIFY WALLET"}
             </button>
-            <Link className="secondary-action" href="/me">BACK TO DESK</Link>
+            {!embedded && <Link className="secondary-action" href="/me">BACK TO PLAYER</Link>}
           </div>
           {auth.error && <p className="profile-auth-error">{auth.error}</p>}
         </section>
@@ -74,7 +74,7 @@ export function ProfilePanel() {
   };
 
   return (
-    <div className="profile-page shell page-shell">
+    <div className={embedded ? "profile-page embedded-profile" : "profile-page shell page-shell"} id="profile">
       <header className="profile-heading">
         <div><p className="eyebrow hazard">PLAYER IDENTITY · VERIFIED WALLET</p><h1>Your profile</h1></div>
         <p>Choose the name and dither mark other players will see. Your wallet address stays the proof behind it.</p>
@@ -84,7 +84,7 @@ export function ProfilePanel() {
         <section className="profile-card identity-card">
           <p className="eyebrow">IDENTITY</p>
           <div className="profile-preview">
-            <DitherAvatar seed={`${playerName}:${address.slice(-6)}`} tone={tone} size={96} />
+            <DitherAvatar seed={playerName} tone={tone} size={96} />
             <div><strong>{playerName}</strong><span>{shortAddress(address)}</span></div>
           </div>
 
@@ -99,7 +99,7 @@ export function ProfilePanel() {
             <div>
               {AVATAR_TONES.map((item) => (
                 <button key={item.id} onClick={() => setForm({ key: profileKey, username, tone: item.id })} aria-label={item.label} aria-pressed={tone === item.id} className={tone === item.id ? "active" : ""}>
-                  <DitherAvatar seed={`${playerName}:${address.slice(-6)}`} tone={item.id} size={34} />
+                  <DitherAvatar seed={playerName} tone={item.id} size={34} />
                 </button>
               ))}
             </div>

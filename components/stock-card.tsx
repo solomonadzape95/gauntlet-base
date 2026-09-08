@@ -1,5 +1,4 @@
 import { StockLogo } from "@/components/stock-logo";
-import { MARKET_QUOTES } from "@/lib/practice-game";
 import type { Stock } from "@/lib/stocks";
 
 export function StockCard({
@@ -17,7 +16,6 @@ export function StockCard({
 }) {
   const interactive = Boolean(onSelect);
   const Tag = interactive ? "button" : "article";
-  const quote = MARKET_QUOTES.find((item) => item.ticker === stock.ticker);
 
   return (
     <Tag
@@ -28,14 +26,14 @@ export function StockCard({
     >
       <div className="stock-card-top">
         <span>{stock.ticker}</span>
-        {quote && <strong className={quote.change >= 0 ? "up" : "down"}>{quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)}%</strong>}
+        <strong>{selected ? "SELECTED" : "AVAILABLE"}</strong>
       </div>
       <div className={`stock-logo ${stock.ticker === "SNDKc" ? "wide-logo" : ""}`}>
         <StockLogo ticker={stock.ticker} />
       </div>
       <div className="stock-card-bottom">
         <h3>{stock.company}</h3>
-        <strong>{draftCost ? `${draftCost} CR` : quote ? `$${quote.price.toFixed(2)}` : "—"}</strong>
+        <strong>{draftCost ? `${draftCost} CR` : "—"}</strong>
         {draftCost && <small className="draft-cost-note">DRAFT COST · ONCHAIN PRICED</small>}
       </div>
     </Tag>

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const GUEST_COOKIE = "gauntlet_guest";
 
-export type PlayerIdentity = { userId: string | null; guestId: string | null; guestHash: string };
+export type PlayerIdentity = { userId: string | null; guestId: string | null; guestHash: string; sessionHash: string };
 
 export async function resolvePlayerIdentity(request: NextRequest, supabase: SupabaseClient): Promise<PlayerIdentity | null> {
   const authorization = request.headers.get("authorization");
@@ -14,10 +14,13 @@ export async function resolvePlayerIdentity(request: NextRequest, supabase: Supa
     const { data } = await supabase.auth.getUser(token);
     if (!data.user) return null;
     const guestId = request.cookies.get(GUEST_COOKIE)?.value ?? randomUUID();
-    return { userId: data.user.id, guestId, guestHash: createHash("sha256").update(guestId).digest("hex") };
+    const sessionHash = createHash("sha256").update(guestId).digest("hex");
+    return { userId: data.user.id, guestId, guestHash: sessionHash, sessionHash };
   }
   const guestId = request.cookies.get(GUEST_COOKIE)?.value ?? randomUUID();
-  return { userId: null, guestId, guestHash: createHash("sha256").update(guestId).digest("hex") };
+  const sessionHash = createHash("sha256").update(guestId).digest("hex");
+  const linked = await supabase.from("wallet_profile_sessions").select("profile_guest_hash").eq("session_hash", sessionHash).maybeSingle<{ profile_guest_hash: string }>();
+  return { userId: null, guestId, guestHash: linked.data?.profile_guest_hash ?? sessionHash, sessionHash };
 }
 
 export function withPlayerCookie(response: NextResponse, identity: PlayerIdentity) {

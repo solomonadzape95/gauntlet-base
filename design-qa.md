@@ -27,3 +27,15 @@ The references were treated as visual inspiration, not product instructions. The
 Passed for the requested visual and responsive scope. The implementation preserves Gauntlet's near-black, hazard-yellow, square-panel Nebulas language, uses real stock marks and dithered player identity, and translates the references into functional team-management and competition states.
 
 The only console noise observed was the existing development analytics request failing locally; no new application runtime errors were observed.
+
+## Corrective QA — September 9, 2026
+
+- Landing: `/private/tmp/gauntlet-audit/09-landing-loaded.jpg`
+- Leagues route and active navigation: `/private/tmp/gauntlet-audit/06-leagues-fixed.jpg`
+- Team identity, dither marks, and row endings: `/private/tmp/gauntlet-audit/07-team-fixed.jpg`
+- Compact battle timer and versus layout: `/private/tmp/gauntlet-audit/08-battle-fixed.jpg`
+- Player hub: `/private/tmp/gauntlet-audit/10-player-hub.jpg`
+
+The responsive browser pass confirmed that `/leagues` resolves instead of returning the application 404, the current navigation item exposes `aria-current="page"`, and the landing page contains no simulated-market label. In Transfers, two 500-credit additions were allowed against a 175-credit Bank, producing `-825 CR`; confirmation remained disabled. The active battle reduced its former banner to the remaining time only.
+
+The leagues API and wallet profile API correctly remain unavailable in this local database until pending migrations `007` and `008` are applied. That database state is separate from the repaired `/leagues` route.

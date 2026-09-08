@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { DitherAvatar } from "@/components/dither-avatar";
+import { GauntletLoader } from "@/components/gauntlet-loader";
 import { useGauntletAuth, type AvatarTone } from "@/components/gauntlet-auth";
 import { playerHeaders } from "@/lib/team-client";
 
@@ -17,6 +18,7 @@ export function LeaguesPanel() {
   const [value, setValue] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -24,10 +26,11 @@ export function LeaguesPanel() {
     const result = await response.json() as { leagues?: League[]; error?: string };
     if (!response.ok) throw new Error(result.error ?? "Could not load leagues.");
     setLeagues(result.leagues ?? []);
+    setLoading(false);
   }, [session]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void load().catch((cause) => setMessage(cause instanceof Error ? cause.message : "Could not load leagues.")), 0);
+    const timer = window.setTimeout(() => void load().catch((cause) => setMessage(cause instanceof Error ? cause.message : "Could not load leagues.")).finally(() => setLoading(false)), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
 
@@ -61,7 +64,7 @@ export function LeaguesPanel() {
       <div className="league-input-row"><input maxLength={mode === "create" ? 32 : 6} value={value} onChange={(event) => setValue(mode === "join" ? event.target.value.toUpperCase() : event.target.value)} placeholder={mode === "create" ? "After Hours Club" : "A1B2C3"} /><button className="primary-action" disabled={working || value.trim().length < (mode === "create" ? 3 : 6)} onClick={() => void submit()}>{working ? "WORKING…" : mode === "create" ? "CREATE LEAGUE" : "JOIN LEAGUE"}</button></div>
       {message && <p className="battle-data-error">{message}</p>}
     </section>
-    <div className="league-grid">{leagues.map((league) => <section className="league-card dashboard-panel" key={league.id}><header><span className="league-shield"><Shield size={24} /></span><div><p className="eyebrow">YOUR LEAGUE</p><h2>{league.name}</h2></div><button onClick={() => void copy(league.join_code)}>{copied === league.join_code ? <Check size={14} /> : <Copy size={14} />}{league.join_code}</button></header><div className="league-members">{[...league.members].sort((a, b) => (b.points ?? -1) - (a.points ?? -1)).map((member, index) => <div key={`${member.name}:${member.joinedAt}`}><strong>{String(index + 1).padStart(2, "0")}</strong><DitherAvatar seed={`${league.id}:${member.name}`} tone={member.tone} size={34} /><span>{member.teamEntryId ? <Link href={`/team/${member.teamEntryId}`}><b>{member.name}</b></Link> : <b>{member.name}</b>}<small>{member.points != null && index === 0 ? "LEAGUE LEADER" : "MEMBER"}</small></span><em>{member.points == null ? "— PTS" : `${member.points.toLocaleString()} PTS`}</em></div>)}</div></section>)}</div>
-    {!leagues.length && <div className="league-empty"><Shield size={34} /><p>Your leagues will live here. Create one and share its code, or join one from a friend.</p></div>}
+    <div className="league-grid">{leagues.map((league) => <section className="league-card dashboard-panel" key={league.id}><header><span className="league-shield"><Shield size={24} /></span><div><p className="eyebrow">YOUR LEAGUE</p><h2>{league.name}</h2></div><button onClick={() => void copy(league.join_code)}>{copied === league.join_code ? <Check size={14} /> : <Copy size={14} />}{league.join_code}</button></header><div className="league-members">{[...league.members].sort((a, b) => (b.points ?? -1) - (a.points ?? -1)).map((member, index) => <div key={`${member.name}:${member.joinedAt}`}><strong>{String(index + 1).padStart(2, "0")}</strong><DitherAvatar seed={member.name} tone={member.tone} size={34} /><span>{member.teamEntryId ? <Link href={`/team/${member.teamEntryId}`}><b>{member.name}</b></Link> : <b>{member.name}</b>}<small>{member.points != null && index === 0 ? "LEAGUE LEADER" : "MEMBER"}</small></span><em>{member.points == null ? "— PTS" : `${member.points.toLocaleString()} PTS`}</em></div>)}</div></section>)}</div>
+    {loading ? <GauntletLoader label="LOADING LEAGUES" /> : !leagues.length && <div className="league-empty"><Shield size={34} /><p>Create a league and share its code, or join one from a friend.</p></div>}
   </div>;
 }

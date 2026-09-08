@@ -5,6 +5,7 @@ import { isUuid } from "@/lib/battle-record";
 import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { scoreGameWeek } from "@/lib/game-week";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }>();
   if (!entry.data) return NextResponse.json({ error: "That Game Week team does not exist." }, { status: entry.error ? 503 : 404 });
   const week = await supabase.from("game_weeks").select("label,status,opening_prices").eq("id", entry.data.game_week_id).single<{ label: string; status: string; opening_prices: PricePoint[] | null }>();
-  const profile = entry.data.owner_user_id ? await supabase.from("profiles").select("username,avatar_tone").eq("user_id", entry.data.owner_user_id).maybeSingle<{ username: string; avatar_tone: string }>() : null;
+  const profiles = await readPlayerPresentations(supabase, [entry.data]);
+  const profile = profiles.get(playerReferenceKey(entry.data));
   let points = entry.data.final_points;
   let returnPercent = entry.data.final_return_bps == null ? null : entry.data.final_return_bps / 100;
   if (week.data?.status === "active" && week.data.opening_prices) {
@@ -34,8 +36,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return NextResponse.json({
     entry: {
       id: entry.data.id,
-      name: profile?.data?.username ?? (entry.data.owner_user_id ? "Verified player" : `Guest ${entry.data.guest_session_hash?.slice(0, 4).toUpperCase()}`),
-      tone: profile?.data?.avatar_tone ?? "hazard",
+      name: profile?.username ?? fallbackPlayerName(entry.data),
+      tone: profile?.avatarTone ?? "hazard",
       lineup: entry.data.lineup,
       points,
       returnPercent,

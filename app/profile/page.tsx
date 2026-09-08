@@ -1,5 +1,5 @@
-import { ProfilePanel } from "@/components/profile-panel";
+import { redirect } from "next/navigation";
 
 export default function ProfilePage() {
-  return <ProfilePanel />;
+  redirect("/me#profile");
 }

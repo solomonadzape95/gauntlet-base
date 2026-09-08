@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { useGauntletAuth } from "@/components/gauntlet-auth";
+import { GauntletLoader } from "@/components/gauntlet-loader";
 import { playerHeaders } from "@/lib/team-client";
 import { useActiveTeam } from "@/lib/use-active-team";
 
@@ -76,7 +77,7 @@ export function Leaderboard() {
       {message && <p className="battle-data-error">{message}</p>}
       <section className="leaderboard-table dashboard-panel">
         <div className="leaderboard-row heading"><span>RANK</span><span>PLAYER / TEAM</span><span>RETURN</span><span>POINTS</span></div>
-        {loading ? <p className="leaderboard-empty">LOADING GAME WEEK…</p> : entries.length ? entries.map((entry) => (
+        {loading ? <GauntletLoader label="LOADING GAME WEEK" /> : entries.length ? entries.map((entry) => (
           <article className="leaderboard-row" key={entry.id}>
             <strong className="leaderboard-rank">{entry.rank ? String(entry.rank).padStart(2, "0") : "—"}</strong>
             <span><Link className="leaderboard-team-link" href={`/team/${entry.id}`}><strong>{entry.name}</strong><small>{entry.picks.join(" · ")}{entry.transferPenaltyPoints ? ` · −${entry.transferPenaltyPoints} TRANSFER PTS` : ""}</small></Link></span>
