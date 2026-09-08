@@ -73,6 +73,15 @@ export function savePracticeDraft(picks: DraftPick[]) {
   return draft;
 }
 
+export function markPracticeDraftOwned(draftId: string) {
+  const drafts = readPracticeDrafts();
+  const next = drafts.map((draft) => draft.id === draftId ? { ...draft, status: "owned" as const } : draft);
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event("gauntlet:drafts-changed"));
+  }
+}
+
 export function scoreDraft(draft: PracticeDraft) {
   return draft.picks.reduce((score, pick) => {
     const quote = MARKET_QUOTES.find((item) => item.ticker === pick.ticker);

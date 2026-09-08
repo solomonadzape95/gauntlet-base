@@ -11,7 +11,17 @@ import { base } from "wagmi/chains";
 import { StockCard } from "@/components/stock-card";
 import { WalletStatus } from "@/components/wallet-status";
 import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "@/lib/allocations";
-import { savePracticeDraft } from "@/lib/practice-game";
+import { markPracticeDraftOwned, savePracticeDraft } from "@/lib/practice-game";
+import {
+  attachPurchaseWallet,
+  confirmedPurchaseCount,
+  createPurchaseSession,
+  isPurchaseSessionComplete,
+  readPurchaseSession,
+  savePurchaseSession,
+  updatePurchaseRow,
+  type PurchaseSession,
+} from "@/lib/purchase-session";
 import { B20_DECIMALS, DEFAULT_DRAFT, getStock, STOCKS } from "@/lib/stocks";
 
 type Step = "select" | "review" | "own";
@@ -31,6 +41,13 @@ type PricePreview = {
 type FirmQuote = {
   ticker: string;
   transaction: { to: Address; data: Hex; value: string; gas?: string };
+};
+
+type LocationCheck = {
+  country: string | null;
+  eligible: boolean;
+  message: string;
+  status: "idle" | "loading" | "ready" | "error";
 };
 
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
@@ -53,17 +70,61 @@ export function DraftBuilder() {
   const [step, setStep] = useState<Step>("select");
   const [realAmount, setRealAmount] = useState(5);
   const [eligible, setEligible] = useState(false);
+  const [locationCheck, setLocationCheck] = useState<LocationCheck>({
+    country: null,
+    eligible: false,
+    message: "Location has not been checked yet.",
+    status: "idle",
+  });
   const [quoteState, setQuoteState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [quoteError, setQuoteError] = useState("");
   const [quotes, setQuotes] = useState<PricePreview[]>([]);
   const [approved, setApproved] = useState(false);
   const [purchaseState, setPurchaseState] = useState<"idle" | "approving" | "buying" | "complete" | "error">("idle");
-  const [purchaseProgress, setPurchaseProgress] = useState(0);
   const [purchaseError, setPurchaseError] = useState("");
-  const [receipts, setReceipts] = useState<string[]>([]);
+  const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
+
+  useEffect(() => {
+    const saved = readPurchaseSession();
+    if (!saved) return;
+
+    const timer = window.setTimeout(() => {
+      setSelected(saved.picks.map((pick) => pick.ticker));
+      setVirtualAllocations(Object.fromEntries(saved.picks.map((pick) => [pick.ticker, pick.virtualAmount])));
+      setRealAmount(saved.realAmount);
+      setPurchaseSession(saved);
+      setPurchaseState(isPurchaseSessionComplete(saved) ? "complete" : "idle");
+      setStep("own");
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== "own") return;
+    let cancelled = false;
+
+    fetch("/api/eligibility", { cache: "no-store" })
+      .then(async (response) => {
+        const result = (await response.json()) as Omit<LocationCheck, "status">;
+        if (!cancelled) setLocationCheck({ ...result, status: "ready" });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLocationCheck({
+            country: null,
+            eligible: false,
+            message: "The location check is unavailable. Practice mode remains open.",
+            status: "error",
+          });
+        }
+      });
+
+    return () => { cancelled = true; };
   }, [step]);
 
   const picks = useMemo(
@@ -84,6 +145,14 @@ export function DraftBuilder() {
   const allocationRemaining = VIRTUAL_BUDGET - allocationTotal;
   const allocationsValid = allocationRemaining === 0
     && selected.every((ticker) => (virtualAllocations[ticker] ?? 0) > 0);
+  const confirmedCount = confirmedPurchaseCount(purchaseSession);
+  const purchaseStarted = Boolean(purchaseSession?.rows.some((row) => row.status !== "ready" || row.txHash));
+
+  const persistPurchaseSession = (session: PurchaseSession) => {
+    const saved = savePurchaseSession(session);
+    setPurchaseSession(saved);
+    return saved;
+  };
 
   const resetQuote = () => {
     setQuoteState("idle");
@@ -91,9 +160,7 @@ export function DraftBuilder() {
     setQuotes([]);
     setApproved(false);
     setPurchaseState("idle");
-    setPurchaseProgress(0);
     setPurchaseError("");
-    setReceipts([]);
   };
 
   const toggle = (ticker: string) => {
@@ -124,12 +191,55 @@ export function DraftBuilder() {
     router.push(isConnected ? "/me" : "/battle/demo");
   };
 
+  const enterOwnership = () => {
+    if (!allocationsValid) return;
+    const draft = savePracticeDraft(selected.map((ticker) => ({
+      ticker,
+      virtualAmount: virtualAllocations[ticker],
+    })));
+    const allocationCents = allocateByWeight(
+      selected.map((ticker) => virtualAllocations[ticker]),
+      realAmount * 100,
+    );
+    persistPurchaseSession(createPurchaseSession({
+      draftId: draft.id,
+      walletAddress: address,
+      realAmount,
+      picks: selected.map((ticker, index) => ({
+        ticker,
+        virtualAmount: virtualAllocations[ticker],
+        allocationCents: allocationCents[index],
+      })),
+    }));
+    setStep("own");
+  };
+
+  const changeRealAmount = (amount: number) => {
+    if (purchaseStarted || !purchaseSession) return;
+    resetQuote();
+    const allocationCents = allocateByWeight(
+      purchaseSession.picks.map((pick) => pick.virtualAmount),
+      amount * 100,
+    );
+    persistPurchaseSession(createPurchaseSession({
+      draftId: purchaseSession.draftId,
+      walletAddress: purchaseSession.walletAddress ?? address,
+      realAmount: amount,
+      picks: purchaseSession.picks.map((pick, index) => ({
+        ...pick,
+        allocationCents: allocationCents[index],
+      })),
+    }));
+    setRealAmount(amount);
+  };
+
   const previewPrices = async () => {
-    if (!address || !eligible) return;
+    if (!address || !eligible || !locationCheck.eligible || !purchaseSession) return;
     setQuoteState("loading");
     setQuoteError("");
 
     try {
+      persistPurchaseSession(attachPurchaseWallet(purchaseSession, address));
       const response = await fetch("/api/quotes", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -170,7 +280,8 @@ export function DraftBuilder() {
         args: [spender as Address, parseUnits(String(realAmount), 6)],
         chainId: base.id,
       });
-      await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") throw new Error("The USDC approval reverted on Base.");
       setApproved(true);
       setPurchaseState("idle");
     } catch (error) {
@@ -180,22 +291,49 @@ export function DraftBuilder() {
   };
 
   const buyDraft = async () => {
-    if (!address || !publicClient || !approved) return;
+    if (!address || !publicClient || !approved || !purchaseSession) return;
     setPurchaseState("buying");
-    setPurchaseProgress(receipts.length);
     setPurchaseError("");
-    const confirmed = [...receipts];
+    let active = purchaseSession;
+    let activeTicker: string | null = null;
 
     try {
       await ensureBase();
-      for (let index = confirmed.length; index < picks.length; index += 1) {
+      active = persistPurchaseSession(attachPurchaseWallet(active, address));
+
+      for (let index = 0; index < active.rows.length; index += 1) {
+        const row = active.rows[index];
+        if (row.status === "confirmed") continue;
+        activeTicker = row.ticker;
+        const stock = getStock(row.ticker);
+        if (!stock) throw new Error(`${row.ticker} is no longer supported.`);
+
+        let balanceBefore = row.balanceBefore;
+        if (balanceBefore === undefined) {
+          const balance = await publicClient.readContract({
+            address: stock.contractAddress,
+            abi: erc20Abi,
+            functionName: "balanceOf",
+            args: [address],
+          });
+          balanceBefore = balance.toString();
+          active = persistPurchaseSession(updatePurchaseRow(active, row.ticker, {
+            balanceBefore,
+            error: undefined,
+          }));
+        }
+
+        if (row.txHash) {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: row.txHash as Hex });
+          if (receipt.status !== "success") throw new Error(`${row.ticker} reverted on Base.`);
+        } else {
         const response = await fetch("/api/firm-quote", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ticker: picks[index].ticker, allocationCents: Math.round(realSplit[index] * 100), taker: address }),
+            body: JSON.stringify({ ticker: row.ticker, allocationCents: row.allocationCents, taker: address }),
         });
         const result = (await response.json()) as FirmQuote & { error?: string };
-        if (!response.ok || !result.transaction) throw new Error(result.error ?? `Could not prepare ${picks[index].ticker}.`);
+          if (!response.ok || !result.transaction) throw new Error(result.error ?? `Could not prepare ${row.ticker}.`);
 
         const hash = await sendTransactionAsync({
           chainId: base.id,
@@ -204,14 +342,43 @@ export function DraftBuilder() {
           value: BigInt(result.transaction.value),
           gas: result.transaction.gas ? BigInt(result.transaction.gas) : undefined,
         });
-        await publicClient.waitForTransactionReceipt({ hash });
-        confirmed.push(hash);
-        setReceipts([...confirmed]);
-        setPurchaseProgress(index + 1);
+          active = persistPurchaseSession(updatePurchaseRow(active, row.ticker, {
+            status: "submitted",
+            txHash: hash,
+            error: undefined,
+          }));
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          if (receipt.status !== "success") throw new Error(`${row.ticker} reverted on Base.`);
+        }
+
+        const balanceAfter = await publicClient.readContract({
+          address: stock.contractAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [address],
+        });
+        if (balanceAfter <= BigInt(balanceBefore)) {
+          throw new Error(`${row.ticker} confirmed, but its wallet balance did not increase yet. Retry verification before buying anything again.`);
+        }
+
+        active = persistPurchaseSession(updatePurchaseRow(active, row.ticker, {
+          status: "confirmed",
+          balanceAfter: balanceAfter.toString(),
+          error: undefined,
+        }));
       }
+      if (!isPurchaseSessionComplete(active)) throw new Error("Every stock must be balance-verified before this draft can be owned.");
+      markPracticeDraftOwned(active.draftId);
       setPurchaseState("complete");
     } catch (error) {
-      setPurchaseError(error instanceof Error ? error.message : "The purchase stopped before completion.");
+      const message = error instanceof Error ? error.message : "The purchase stopped before completion.";
+      if (activeTicker) {
+        active = persistPurchaseSession(updatePurchaseRow(active, activeTicker, {
+          status: "failed",
+          error: message,
+        }));
+      }
+      setPurchaseError(message);
       setPurchaseState("error");
     }
   };
@@ -312,7 +479,7 @@ export function DraftBuilder() {
 
             <div className="action-pair review-actions">
               <button className="secondary-action" onClick={() => setStep("select")}>EDIT PICKS</button>
-              <button className="secondary-action" disabled={!allocationsValid} onClick={() => setStep("own")}>OWN THIS DRAFT</button>
+              <button className="secondary-action" disabled={!allocationsValid} onClick={enterOwnership}>OWN THIS DRAFT</button>
               <button className="primary-action" disabled={!allocationsValid} onClick={playForFree}>SAVE & PLAY FREE <ArrowRight size={18} /></button>
             </div>
           </motion.section>
@@ -340,7 +507,14 @@ export function DraftBuilder() {
                   <label className="eyebrow">TOTAL PURCHASE</label>
                   <div className="amount-options">
                     {[5, 10, 25].map((amount) => (
-                      <button key={amount} onClick={() => { resetQuote(); setRealAmount(amount); }} className={realAmount === amount ? "active" : ""}>${amount}</button>
+                      <button
+                        key={amount}
+                        disabled={purchaseStarted}
+                        onClick={() => changeRealAmount(amount)}
+                        className={realAmount === amount ? "active" : ""}
+                      >
+                        ${amount}
+                      </button>
                     ))}
                   </div>
 
@@ -349,11 +523,24 @@ export function DraftBuilder() {
                     {picks.map((stock, index) => (
                       <div key={stock.ticker}>
                         <span><i style={{ background: stock.logoColor }} /> {stock.ticker}</span>
-                        <strong>
-                          {quotes[index]
-                            ? `≈ ${Number(formatUnits(BigInt(quotes[index].buyAmount), B20_DECIMALS)).toLocaleString("en-US", { maximumSignificantDigits: 5 })} ${stock.ticker}`
-                            : `$${realSplit[index].toFixed(2)}`}
-                        </strong>
+                        <span className="receive-value">
+                          <strong>
+                            {quotes[index]
+                              ? `≈ ${Number(formatUnits(BigInt(quotes[index].buyAmount), B20_DECIMALS)).toLocaleString("en-US", { maximumSignificantDigits: 5 })} ${stock.ticker}`
+                              : `$${realSplit[index].toFixed(2)}`}
+                          </strong>
+                          {purchaseSession?.rows[index] && (
+                            <small className={`purchase-row-status ${purchaseSession.rows[index].status}`}>
+                              {purchaseSession.rows[index].status === "confirmed"
+                                ? "BALANCE VERIFIED"
+                                : purchaseSession.rows[index].status === "submitted"
+                                  ? "SUBMITTED"
+                                  : purchaseSession.rows[index].status === "failed"
+                                    ? "RETRY REQUIRED"
+                                    : "READY"}
+                            </small>
+                          )}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -369,13 +556,25 @@ export function DraftBuilder() {
                   </div>
 
                   <WalletStatus />
+                  <div className={`location-check ${locationCheck.eligible ? "allowed" : ["idle", "loading"].includes(locationCheck.status) ? "" : "blocked"}`}>
+                    <span className="status-dot" />
+                    <p>
+                      <strong>{["idle", "loading"].includes(locationCheck.status) ? "CHECKING LOCATION" : locationCheck.eligible ? "LOCATION CHECK PASSED" : "PRACTICE ONLY"}</strong>
+                      {locationCheck.message}
+                    </p>
+                  </div>
                   <label className="eligibility-check">
-                    <input type="checkbox" checked={eligible} onChange={(event) => setEligible(event.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={eligible}
+                      disabled={!locationCheck.eligible}
+                      onChange={(event) => setEligible(event.target.checked)}
+                    />
                     <span>I confirm I am 18 or older, outside the United States, and permitted to access these tokenized stocks [blockchain tokens that track stock value] where I live.</span>
                   </label>
                   <button
                     className="primary-action full"
-                    disabled={!isConnected || !eligible || quoteState === "loading"}
+                    disabled={!isConnected || !eligible || !locationCheck.eligible || quoteState === "loading"}
                     onClick={previewPrices}
                   >
                     {quoteState === "loading" ? <><LoaderCircle className="spin" size={17} /> CHECKING LIVE PRICES</> : quoteState === "ready" ? "REFRESH PRICE PREVIEW" : "PREVIEW LIVE PRICES"}
@@ -391,22 +590,26 @@ export function DraftBuilder() {
                   {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && approved && purchaseState !== "complete" && (
                     <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying"} onClick={buyDraft}>
                       {purchaseState === "buying"
-                        ? `CONFIRMING STOCK ${purchaseProgress + 1} OF ${picks.length}…`
-                        : receipts.length > 0
-                          ? `RESUME WITH STOCK ${receipts.length + 1} OF ${picks.length}`
+                        ? `VERIFYING STOCK ${Math.min(confirmedCount + 1, picks.length)} OF ${picks.length}…`
+                        : purchaseStarted
+                          ? `RESUME · ${confirmedCount} OF ${picks.length} VERIFIED`
                           : `BUY MY ${picks.length} STOCKS`}
                     </button>
                   )}
                   {purchaseState === "error" && <p className="purchase-message error">{purchaseError}</p>}
                   {purchaseState === "complete" && (
-                    <div className="purchase-complete">
+                    <div className="purchase-complete ownership-reveal">
                       <CheckCircle2 size={19} />
-                      <div><strong>DRAFT OWNED</strong><span>{picks.length} purchases confirmed on Base.</span></div>
+                      <div><strong>YOUR DRAFT IS NOW REAL</strong><span>{picks.length} stock balances verified in your wallet on Base.</span></div>
                     </div>
                   )}
-                  {receipts.length > 0 && (
+                  {purchaseSession?.rows.some((row) => row.txHash) && (
                     <div className="receipt-list">
-                      {receipts.map((hash, index) => <a key={hash} href={`https://basescan.org/tx/${hash}`} target="_blank" rel="noreferrer">STOCK {index + 1} RECEIPT ↗</a>)}
+                      {purchaseSession.rows.map((row) => row.txHash && (
+                        <a key={row.txHash} href={`https://basescan.org/tx/${row.txHash}`} target="_blank" rel="noreferrer">
+                          {row.ticker} · {row.status === "confirmed" ? "VERIFIED" : "RECEIPT"} ↗
+                        </a>
+                      ))}
                     </div>
                   )}
                   <p className="legal-copy">Real purchases are for eligible adults outside the United States. This is not investment advice.</p>

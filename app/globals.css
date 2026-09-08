@@ -262,11 +262,17 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .amount-options button { height: 62px; border: 1px solid var(--edge); border-right: 0; background: transparent; color: var(--faint); font: 400 20px/1 var(--font-utility); }
 .amount-options button:last-child { border-right: 1px solid var(--edge); }
 .amount-options button.active { background: var(--hazard); color: var(--void); border-color: var(--hazard); }
+.amount-options button:disabled { opacity: .72; }
 .receive-list { margin-top: 34px; padding-top: 28px; border-top: 1px solid var(--edge); }
 .receive-list > div { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
 .receive-list > div span { display: flex; align-items: center; gap: 10px; font: 400 13px/1 var(--font-utility); }
 .receive-list i { width: 8px; height: 8px; }
 .receive-list strong { font: 400 13px/1 var(--font-utility); }
+.receive-list .receive-value { align-items: flex-end; flex-direction: column; gap: 5px; }
+.purchase-row-status { color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .08em; }
+.purchase-row-status.confirmed { color: var(--signal); }
+.purchase-row-status.submitted { color: var(--ink); }
+.purchase-row-status.failed { color: var(--ember); }
 .integration-notice, .data-notice, .battle-proof { display: flex; align-items: flex-start; gap: 14px; margin: 28px 0; padding: 16px; border: 1px solid color-mix(in srgb,var(--signal) 25%,var(--edge)); background: color-mix(in srgb,var(--signal) 5%,transparent); color: var(--dim); }
 .integration-notice .status-dot { margin-top: 5px; flex: 0 0 auto; }
 .integration-notice p, .data-notice p, .battle-proof p { margin: 0; font-size: 12px; line-height: 1.5; }
@@ -274,6 +280,16 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .integration-notice.error { border-color: color-mix(in srgb,var(--ember) 45%,var(--edge)); background: color-mix(in srgb,var(--ember) 7%,transparent); }
 .integration-notice.error .status-dot { background: var(--ember); box-shadow: 0 0 12px var(--ember); }
 .integration-notice.error strong { color: var(--ember); }
+.location-check { display: flex; align-items: flex-start; gap: 12px; margin: 16px 0; padding: 13px 14px; border: 1px solid var(--edge); color: var(--dim); }
+.location-check .status-dot { flex: 0 0 auto; margin-top: 4px; background: var(--faint); box-shadow: none; }
+.location-check p { margin: 0; font-size: 11px; line-height: 1.5; }
+.location-check strong { display: block; margin-bottom: 4px; color: var(--faint); font: 500 9px/1 var(--font-utility); letter-spacing: .1em; }
+.location-check.allowed { border-color: color-mix(in srgb,var(--signal) 35%,var(--edge)); }
+.location-check.allowed .status-dot { background: var(--signal); box-shadow: 0 0 10px var(--signal); }
+.location-check.allowed strong { color: var(--signal); }
+.location-check.blocked { border-color: color-mix(in srgb,var(--ember) 40%,var(--edge)); }
+.location-check.blocked .status-dot { background: var(--ember); box-shadow: 0 0 10px var(--ember); }
+.location-check.blocked strong { color: var(--ember); }
 .eligibility-check { display: grid; grid-template-columns: 20px 1fr; gap: 11px; align-items: start; margin: 16px 0; color: var(--dim); font-size: 11px; line-height: 1.5; cursor: pointer; }
 .eligibility-check input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--hazard); }
 .purchase-next { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed var(--edge); background: transparent; color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
@@ -285,6 +301,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-complete strong, .purchase-complete span { display: block; }
 .purchase-complete strong { font: 500 11px/1 var(--font-utility); letter-spacing: .1em; }
 .purchase-complete span { margin-top: 5px; color: var(--dim); font-size: 11px; }
+.ownership-reveal { padding-block: 20px; background: color-mix(in srgb,var(--signal) 6%,transparent); }
 .receipt-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(90px,1fr)); gap: 6px; margin-top: 9px; }
 .receipt-list a { padding: 9px 5px; border: 1px solid var(--edge); color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .06em; text-align: center; }
 .receipt-list a:hover { border-color: var(--signal); color: var(--signal); }
