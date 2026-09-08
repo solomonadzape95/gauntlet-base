@@ -132,7 +132,7 @@ function Battle() {
   const strongestPick = holdings.reduce((best, item) => item[1] > best[1] ? item : best, holdings[0] ?? ["—", 0] as const);
   const canOwnBattleDraft = Boolean(draft && activeSession?.playerDraftId === draft.id);
   const isComplete = Boolean(activeSession && remainingBattleSeconds(activeSession) === 0);
-  const awaitingOpponent = Boolean(serverBattleId && activeSession && serverBattle?.status === "waiting");
+  const awaitingOpponent = Boolean((serverBattleId || activeSession?.sharedBattleId) && activeSession && serverBattle?.status === "waiting");
   const isTie = Math.abs(playerScore - rivalScore) < 0.000_001;
   const feedTimestamp = currentPrices.reduce((latest, point) => point.updatedAt > latest ? point.updatedAt : latest, "");
 
@@ -190,6 +190,7 @@ function Battle() {
         const battle = await createDurableBattle(activePlayerPicks);
         const next = { ...activeSession, sharedBattleId: battle.id, serverRole: "creator" as const };
         saveBattleSession(next);
+        setServerBattle(battle);
         durableBattleId = battle.id;
         url = `${window.location.origin}/battle/demo?battle=${battle.id}`;
       } catch {
