@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   }
 
   if (virtualTotal !== VIRTUAL_BUDGET) {
-    return NextResponse.json({ error: "Allocate the full virtual $100,000 before requesting prices." }, { status: 400 });
+    return NextResponse.json({ error: "Allocate the full virtual $1,000 before requesting prices." }, { status: 400 });
   }
 
   const apiKey = process.env.ZEROX_API_KEY;

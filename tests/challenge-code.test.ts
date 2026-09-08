@@ -5,9 +5,9 @@ import { decodeChallenge, encodeChallenge, type Challenge } from "../lib/challen
 import { STOCKS } from "../lib/stocks.ts";
 
 const picks = [
-  { ticker: "AAPLc", virtualAmount: 40_000 },
-  { ticker: "NVDAc", virtualAmount: 35_000 },
-  { ticker: "TSLAc", virtualAmount: 25_000 },
+  { ticker: "AAPLc", virtualAmount: 400 },
+  { ticker: "NVDAc", virtualAmount: 350 },
+  { ticker: "TSLAc", virtualAmount: 250 },
 ];
 const challenge: Challenge = {
   id: "battle-1",

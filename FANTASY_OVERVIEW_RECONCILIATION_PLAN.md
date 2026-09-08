@@ -17,7 +17,7 @@ The demo spine should be:
 ```text
 landing
   -> draft 3–5 verified B20 stocks
-  -> allocate a virtual $100,000
+  -> allocate a virtual $1,000
   -> play a practice battle with real market data
   -> see a contextual "you could own this lineup" moment
   -> pass eligibility and connect a wallet
@@ -35,7 +35,7 @@ This includes the useful insight from the source document—conversion feels str
 | Topic | Source document | Current Gauntlet | Decision | Gap |
 |---|---|---|---|---|
 | Picks | Exactly 5 stocks | 3–5 stocks | **Keep current.** Three picks makes a $5 starter purchase more plausible and lowers first-run friction; five remains available. | Negligible |
-| Draft constraint | Fake $1,000 salary cap with arbitrary stock costs | Allocate a full virtual $100,000 across picks | **Keep current.** Allocation expresses conviction, produces weighted scoring, and maps cleanly to the real purchase split. Arbitrary prices add rules without meaning. | No change |
+| Draft constraint | Fake $1,000 salary cap with arbitrary stock costs | Allocate a full virtual budget across picks | **Merge the useful parts.** Keep conviction-weighted allocation instead of arbitrary per-stock prices, but use the document's clearer $1,000 scale. | Change budget to $1,000 |
 | Stock universe | 15–20 familiar generic tickers | 10 allowlisted official B20 contracts | **Keep current.** Contract truth and tested liquidity matter more than catalogue size. Add stocks only after address, feed, disclosure, decimals, and quote tests pass. | No change |
 | Market data | Finnhub/Alpha Vantage/Yahoo and page-refresh scoring | Static practice values now; official Chainlink B20 total-return feeds planned | **Use the current architecture, finish the integration.** One official feed should power battle snapshots and results. Do not add a second market-data vendor for the core score. | Large, P0 |
 | Score window | Since draft time | Since battle start, allocation-weighted | **Keep current.** A fixed challenge start is fairer and reproducible. A solo practice return may begin at draft lock, but battle scoring begins when both sides are ready. | Negligible |
@@ -69,7 +69,7 @@ Nebulas contributes structure, not its brand palette:
 
 - A clear landing proposition with no wallet wall.
 - A coherent 3–5 stock card draft.
-- Exact $100,000 allocation with an equal-split default.
+- Exact $1,000 allocation with an equal-split default.
 - Optional free play and optional real ownership.
 - Live 0x indicative and firm-quote route structure.
 - Exact USDC approval followed by sequential purchases.

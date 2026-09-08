@@ -8,15 +8,13 @@ import { StockLogo } from "@/components/stock-logo";
 import { WalletButton } from "@/components/wallet-button";
 import { MARKET_QUOTES, scoreDraft } from "@/lib/practice-game";
 import { getStock } from "@/lib/stocks";
-import { usePracticeDrafts } from "@/lib/use-practice-drafts";
+import { useActiveTeam } from "@/lib/use-active-team";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 export function PlayerDashboard() {
   const { isConnected, status } = useAccount();
-  const drafts = usePracticeDrafts();
-
-  const latest = drafts[0];
+  const { team: latest } = useActiveTeam();
   const score = latest ? scoreDraft(latest) : 0;
 
   if (status === "reconnecting") {
@@ -52,13 +50,13 @@ export function PlayerDashboard() {
     <div className="dashboard-shell shell page-shell">
       <header className="dashboard-titlebar">
         <div><p className="eyebrow hazard">PLAYER DESK · PRACTICE MODE</p><h1>Your market room</h1></div>
-        <Link className="primary-action" href="/draft">NEW DRAFT <ArrowRight size={16} /></Link>
+        <Link className="primary-action" href="/draft">EDIT TEAM <ArrowRight size={16} /></Link>
       </header>
 
       <section className="dashboard-metrics">
-        <Metric label="VIRTUAL BALANCE" value={latest ? "$100,000" : "—"} note="No deposit required" />
+        <Metric label="TEAM BUDGET" value={latest ? "$1,000" : "—"} note="Virtual · no deposit" />
         <Metric label="PRACTICE RETURN" value={latest ? `${score >= 0 ? "+" : ""}${score.toFixed(2)}%` : "—"} note="Simulated market feed" signal />
-        <Metric label="DRAFTS" value={String(drafts.length)} note="Saved on this device" />
+        <Metric label="ACTIVE TEAM" value={latest ? `${latest.picks.length} PICKS` : "—"} note="Used in future battles" />
         <Metric label="BATTLE RECORD" value={latest ? "0–0" : "—"} note="Start your first match" />
       </section>
 
@@ -85,15 +83,15 @@ export function PlayerDashboard() {
           <section className="dashboard-panel battle-launcher">
             <p className="eyebrow">NEXT MOVE</p>
             <Swords size={34} />
-            <h2>Put the draft to work.</h2>
+            <h2>Put the team to work.</h2>
             <p>Enter a free practice battle. Your score follows percentage performance, not how much money you own.</p>
             <Link className="primary-action full" href="/battle/demo">START PRACTICE BATTLE <ArrowRight size={16} /></Link>
-            <Link className="dashboard-text-link" href="/draft">OR BUILD ANOTHER LINEUP</Link>
+            <Link className="dashboard-text-link" href="/draft">OR EDIT YOUR TEAM</Link>
           </section>
 
           <section className="dashboard-panel activity-card">
             <div className="panel-heading"><div><p className="eyebrow">ACTIVITY</p><h2>Game log</h2></div><Clock3 size={18} /></div>
-            <div className="activity-row"><CircleDot size={14} /><span><strong>DRAFT SAVED</strong><small>{new Date(latest.createdAt).toLocaleString()}</small></span><span>VIRTUAL</span></div>
+            <div className="activity-row"><CircleDot size={14} /><span><strong>TEAM SAVED</strong><small>{new Date(latest.createdAt).toLocaleString()}</small></span><span>VIRTUAL</span></div>
             <div className="activity-row muted"><Trophy size={14} /><span><strong>FIRST BATTLE</strong><small>Ready when you are</small></span><span>OPEN</span></div>
           </section>
         </div>
@@ -102,7 +100,7 @@ export function PlayerDashboard() {
           <Swords size={36} />
           <h2>Your desk is waiting.</h2>
           <p>Create a free virtual lineup. A wallet and real money are never required to play.</p>
-          <Link className="primary-action" href="/draft">BUILD YOUR FIRST DRAFT <ArrowRight size={16} /></Link>
+          <Link className="primary-action" href="/draft">BUILD YOUR FIRST TEAM <ArrowRight size={16} /></Link>
         </section>
       )}
     </div>

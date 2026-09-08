@@ -1,4 +1,4 @@
-export const VIRTUAL_BUDGET = 100_000;
+export const VIRTUAL_BUDGET = 1_000;
 
 export function makeEvenAllocations(tickers: string[]) {
   if (tickers.length === 0) return {};

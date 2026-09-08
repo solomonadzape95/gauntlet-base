@@ -8,7 +8,7 @@
 
 > **Build a stock lineup. Own a little. Battle your friends.**
 
-Gauntlet gives each player $100,000 in virtual funds, lets them draft three to five companies, and then offers a guided way to buy a small real version of that draft using Coinbase tokenized stocks. The player keeps the real stocks in their own wallet and uses the portfolio as their team in a social Stock Battle.
+Gauntlet gives each player $1,000 in virtual funds, lets them draft three to five companies, and then offers a guided way to buy a small real version of that team using Coinbase tokenized stocks. The player keeps the real stocks in their own wallet and uses the portfolio as their team in a social Stock Battle.
 
 This document is the canonical plan for the Base Builder Quest version of Gauntlet. The previous football survival-pool application and plan are preserved in [`../gauntlet-legacy-football`](../gauntlet-legacy-football).
 
@@ -51,7 +51,7 @@ The most important number is **new B20-owning wallets** [wallets that held none 
 ### V1 must do
 
 1. Let anyone create a three-to-five-stock fantasy draft without connecting a wallet.
-2. Display a $100,000 virtual portfolio the player can allocate across all picks, with an equal-split shortcut.
+2. Display a $1,000 virtual portfolio the player can allocate across all picks, with an equal-split shortcut.
 3. Explain the difference between virtual selections and real ownership.
 4. Restrict real purchase functionality to eligible non-US adults.
 5. Connect a Base-compatible wallet.
@@ -87,7 +87,7 @@ These are deliberate exclusions, not missing features.
 The landing page immediately explains the loop:
 
 > **Build a lineup. Own a little. Battle your friends.**
-> Draft a $100,000 fantasy portfolio, then own a miniature real version on Base from a few dollars.
+> Draft a $1,000 fantasy portfolio, then own a miniature real version on Base from a few dollars.
 
 Primary action: `ENTER THE GAUNTLET`  
 Secondary action: `WATCH A BATTLE`
@@ -98,9 +98,9 @@ No wallet is requested here.
 
 The player selects between three and five stocks from an allowlist [a deliberately approved list] of official Coinbase tokenized stocks.
 
-For V1, players set the weight of each pick by allocating the full virtual $100,000. The interface begins with an equal split, then lets them express stronger or weaker conviction before locking the portfolio:
+For V1, players set the weight of each pick by allocating the full virtual $1,000. The interface begins with an equal split, then lets them express stronger or weaker conviction before locking the portfolio:
 
-The default divides the $100,000 virtual balance as evenly as possible. Players can then edit exact dollar allocations, but the total must remain exactly $100,000 before they continue.
+The default divides the $1,000 virtual balance as evenly as possible. Players can then edit exact dollar allocations, but the total must remain exactly $1,000 before they continue.
 
 Stock cards should be neutral and consistent. They may show company name, ticker, verified status, current price, and recent price movement, but must not label anything as `recommended`, `safe`, or `best`.
 
@@ -236,7 +236,7 @@ stock return = (current total-return price / starting total-return price) - 1
 For the allocation-weighted portfolio:
 
 ```text
-portfolio return = sum of (stock return × that stock's share of the virtual $100,000)
+portfolio return = sum of (stock return × that stock's share of the virtual $1,000)
 ```
 
 A **total-return price** [a price adjusted to account for dividends and stock splits] should come from the official Chainlink feed associated with the B20 token.
@@ -499,7 +499,7 @@ Do not treat a wallet address as proof of a unique human.
 - `id`
 - `wallet_address`, nullable until connection
 - `status`: `editing | locked | ownership_pending | owned | abandoned`
-- `virtual_total`: fixed at `100000`
+- `virtual_total`: fixed at `1000`
 - `real_purchase_total`, nullable
 - `created_at`
 - `owned_at`, nullable
@@ -848,7 +848,7 @@ Never simulate a transaction and present it as real.
 
 ### 10–25 seconds: hook
 
-Select NVIDIA, Apple, and Tesla using the $100,000 fantasy draft.
+Select NVIDIA, Apple, and Tesla using the $1,000 fantasy team.
 
 ### 25–55 seconds: transformation
 

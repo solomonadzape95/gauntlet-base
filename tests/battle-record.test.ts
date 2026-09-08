@@ -4,9 +4,9 @@ import test from "node:test";
 import { createBattleWindow, isUuid, normalizeLineup } from "../lib/battle-record.ts";
 
 const lineup = [
-  { ticker: "NVDAc", virtualAmount: 33_333 },
-  { ticker: "AAPLc", virtualAmount: 33_333 },
-  { ticker: "TSLAc", virtualAmount: 33_334 },
+  { ticker: "NVDAc", virtualAmount: 333 },
+  { ticker: "AAPLc", virtualAmount: 333 },
+  { ticker: "TSLAc", virtualAmount: 334 },
 ];
 
 test("normalizes only complete supported lineups", () => {

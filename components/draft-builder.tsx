@@ -10,6 +10,7 @@ import { base } from "wagmi/chains";
 
 import { StockCard } from "@/components/stock-card";
 import { WalletStatus } from "@/components/wallet-status";
+import { useGauntletAuth } from "@/components/gauntlet-auth";
 import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "@/lib/allocations";
 import { markPracticeDraftOwned, readPracticeDrafts, savePracticeDraft } from "@/lib/practice-game";
 import {
@@ -25,6 +26,7 @@ import {
   type PurchaseSession,
 } from "@/lib/purchase-session";
 import { B20_DECIMALS, DEFAULT_DRAFT, getStock, STOCKS } from "@/lib/stocks";
+import { saveActiveTeam } from "@/lib/team-client";
 
 type Step = "select" | "review" | "own";
 const MIN_PICKS = 3;
@@ -60,8 +62,9 @@ const money = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
+export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; returnTo?: string }) {
   const router = useRouter();
+  const { session } = useGauntletAuth();
   const { address, chainId, isConnected } = useAccount();
   const publicClient = usePublicClient({ chainId: base.id });
   const { switchChainAsync } = useSwitchChain();
@@ -84,6 +87,7 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
   const [approved, setApproved] = useState(false);
   const [purchaseState, setPurchaseState] = useState<"idle" | "approving" | "buying" | "complete" | "error">("idle");
   const [purchaseError, setPurchaseError] = useState("");
+  const [teamError, setTeamError] = useState("");
   const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
 
   useEffect(() => {
@@ -198,18 +202,32 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
     setVirtualAllocations((current) => ({ ...current, [ticker]: amount }));
   };
 
-  const playForFree = () => {
+  const playForFree = async () => {
     if (!allocationsValid) return;
-    savePracticeDraft(selected.map((ticker) => ({ ticker, virtualAmount: virtualAllocations[ticker] })));
-    router.push(isConnected ? "/me" : "/battle/demo");
+    setTeamError("");
+    const picks = selected.map((ticker) => ({ ticker, virtualAmount: virtualAllocations[ticker] }));
+    savePracticeDraft(picks);
+    const saved = await saveActiveTeam(picks, session);
+    if (session && !saved) {
+      setTeamError("Your team is safe in this browser, but account sync failed. Try saving again before entering a battle.");
+      return;
+    }
+    router.push(returnTo ?? (isConnected ? "/me" : "/battle/demo"));
   };
 
-  const enterOwnership = () => {
+  const enterOwnership = async () => {
     if (!allocationsValid) return;
-    const draft = savePracticeDraft(selected.map((ticker) => ({
+    setTeamError("");
+    const picks = selected.map((ticker) => ({
       ticker,
       virtualAmount: virtualAllocations[ticker],
-    })));
+    }));
+    const draft = savePracticeDraft(picks);
+    const saved = await saveActiveTeam(picks, session);
+    if (session && !saved) {
+      setTeamError("Your team is safe in this browser, but account sync failed. Try saving again before continuing.");
+      return;
+    }
     const allocationCents = allocateByWeight(
       selected.map((ticker) => virtualAllocations[ticker]),
       realAmount * 100,
@@ -435,7 +453,7 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
                 <h1>DRAFT A <em>PORTFOLIO.</em></h1>
               </div>
               <div className="heading-aside">
-                <p>Choose three to five companies. You will decide how to divide your virtual $100,000 next.</p>
+                <p>Choose three to five companies. You will decide how to divide your virtual $1,000 next.</p>
                 <div className="selection-count"><span>{selected.length}</span> PICKED <small>3 MIN · 5 MAX</small></div>
               </div>
             </div>
@@ -459,7 +477,7 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
           <motion.section key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
             <div className="page-heading">
               <p className="eyebrow hazard">ROUND 02 · VIRTUAL PORTFOLIO</p>
-              <h1>ALLOCATE YOUR <em>$100K.</em></h1>
+              <h1>ALLOCATE YOUR <em>$1K.</em></h1>
               <p className="lede">Set the virtual amount behind each pick. No money moves here—this is your practice portfolio.</p>
             </div>
 
@@ -482,14 +500,14 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
                   <div key={stock.ticker} className="allocation-row">
                     <span className="allocation-rank">0{index + 1}</span>
                     <span className="allocation-company">{stock.company}<small>{stock.ticker}</small></span>
-                    <span className="allocation-bar"><i style={{ width: `${Math.min(100, (virtualAllocations[stock.ticker] ?? 0) / 1000)}%`, background: stock.logoColor }} /></span>
+                    <span className="allocation-bar"><i style={{ width: `${Math.min(100, (virtualAllocations[stock.ticker] ?? 0) / 10)}%`, background: stock.logoColor }} /></span>
                     <label className="allocation-input">
                       <span>$</span>
                       <input
                         type="number"
                         min="0"
                         max={VIRTUAL_BUDGET}
-                        step="1000"
+                        step="10"
                         value={virtualAllocations[stock.ticker] ?? 0}
                         onChange={(event) => updateAllocation(stock.ticker, event.target.value)}
                         aria-label={`${stock.company} virtual allocation in dollars`}
@@ -502,9 +520,10 @@ export function DraftBuilder({ ownDraftId }: { ownDraftId?: string }) {
 
             <div className="action-pair review-actions">
               <button className="secondary-action" onClick={() => setStep("select")}>EDIT PICKS</button>
-              <button className="secondary-action" disabled={!allocationsValid} onClick={enterOwnership}>OWN THIS DRAFT</button>
-              <button className="primary-action" disabled={!allocationsValid} onClick={playForFree}>SAVE & PLAY FREE <ArrowRight size={18} /></button>
+              <button className="secondary-action" disabled={!allocationsValid} onClick={() => void enterOwnership()}>OWN THIS TEAM</button>
+              <button className="primary-action" disabled={!allocationsValid} onClick={() => void playForFree()}>{returnTo ? "SAVE TEAM & RETURN" : "SAVE TEAM & PLAY"} <ArrowRight size={18} /></button>
             </div>
+            {teamError && <p className="battle-data-error">{teamError}</p>}
           </motion.section>
         )}
 

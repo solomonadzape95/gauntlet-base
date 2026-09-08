@@ -1,5 +1,5 @@
-import { DEFAULT_DRAFT } from "@/lib/stocks";
-import { makeEvenAllocations } from "@/lib/allocations";
+import { allocateByWeight, makeEvenAllocations, VIRTUAL_BUDGET } from "./allocations.ts";
+import { DEFAULT_DRAFT } from "./stocks.ts";
 
 export type DraftPick = { ticker: string; virtualAmount: number };
 
@@ -54,10 +54,17 @@ export function parsePracticeDraftSnapshot(snapshot: string): PracticeDraft[] {
   try {
     const parsed = JSON.parse(snapshot) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isPracticeDraft);
+    return parsed.filter(isPracticeDraft).map(normalizeLegacyDraft);
   } catch {
     return [];
   }
+}
+
+function normalizeLegacyDraft(draft: PracticeDraft): PracticeDraft {
+  const total = draft.picks.reduce((sum, pick) => sum + pick.virtualAmount, 0);
+  if (total !== 100_000) return draft;
+  const allocations = allocateByWeight(draft.picks.map((pick) => pick.virtualAmount), VIRTUAL_BUDGET);
+  return { ...draft, picks: draft.picks.map((pick, index) => ({ ...pick, virtualAmount: allocations[index] })) };
 }
 
 export function savePracticeDraft(picks: DraftPick[]) {
@@ -85,7 +92,7 @@ export function markPracticeDraftOwned(draftId: string) {
 export function scoreDraft(draft: PracticeDraft) {
   return draft.picks.reduce((score, pick) => {
     const quote = MARKET_QUOTES.find((item) => item.ticker === pick.ticker);
-    return score + (quote?.change ?? 0) * (pick.virtualAmount / 100_000);
+    return score + (quote?.change ?? 0) * (pick.virtualAmount / VIRTUAL_BUDGET);
   }, 0);
 }
 

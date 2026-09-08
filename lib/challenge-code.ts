@@ -1,4 +1,5 @@
 import type { PricePoint, ScoredPick } from "./battle-scoring.ts";
+import { VIRTUAL_BUDGET } from "./allocations.ts";
 import { STOCKS } from "./stocks.ts";
 
 type ChallengePayload = { v: 2; i: string; e: string; p: [string, number][]; s: [string, number, string][] };
@@ -32,7 +33,7 @@ export function decodeChallenge(code: string | null): Challenge | null {
     const tickers = picks.map((pick) => pick.ticker);
     if (new Set(tickers).size !== tickers.length) return null;
     if (!picks.every((pick) => allowed.has(pick.ticker) && Number.isInteger(pick.virtualAmount) && pick.virtualAmount > 0)) return null;
-    if (picks.reduce((sum, pick) => sum + pick.virtualAmount, 0) !== 100_000) return null;
+    if (picks.reduce((sum, pick) => sum + pick.virtualAmount, 0) !== VIRTUAL_BUDGET) return null;
     const openingPrices = payload.s.map((item) => ({ ticker: item[0], price: item[1], updatedAt: item[2], fresh: true }));
     if (!STOCKS.every((stock) => openingPrices.some((point) => point.ticker === stock.ticker && Number.isFinite(point.price) && point.price > 0 && isDate(point.updatedAt)))) return null;
     return { id: payload.i, endsAt: payload.e, picks, openingPrices };

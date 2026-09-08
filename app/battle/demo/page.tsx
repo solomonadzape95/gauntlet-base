@@ -5,13 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { ArrowRight, Check, Clock3, Copy, Radio, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
+import { useGauntletAuth } from "@/components/gauntlet-auth";
 import { hasUsablePrices, priceReturn, scoreLineup, type PricePoint, type ScoredPick } from "@/lib/battle-scoring";
 import { createBattleSession, readBattleSession, remainingBattleSeconds, saveBattleSession, updateBattlePrices } from "@/lib/battle-session";
 import type { BattleRecord } from "@/lib/battle-record";
 import { decodeChallenge, encodeChallenge } from "@/lib/challenge-code";
 import { defaultPracticeDraft } from "@/lib/practice-game";
 import { useBattleSession } from "@/lib/use-battle-session";
-import { usePracticeDrafts } from "@/lib/use-practice-drafts";
+import { useActiveTeam } from "@/lib/use-active-team";
 
 const rival = defaultPracticeDraft();
 const rivalPicks = ["MSFTc", "GOOGLc", "AMZNc"];
@@ -22,6 +23,7 @@ export default function DemoBattlePage() {
 }
 
 function Battle() {
+  const { session: authSession } = useGauntletAuth();
   const searchParams = useSearchParams();
   const challengeCode = searchParams.get("challenge");
   const serverBattleId = searchParams.get("battle");
@@ -29,10 +31,12 @@ function Battle() {
   const [serverBattle, setServerBattle] = useState<BattleRecord | null>(null);
   const [serverLoading, setServerLoading] = useState(Boolean(serverBattleId));
   const challengerPicks = serverBattle?.player_picks ?? challenge?.picks ?? null;
-  const drafts = usePracticeDrafts();
-  const draft = drafts[0] ?? null;
+  const { team: draft, loading: teamLoading, error: teamLoadError } = useActiveTeam();
   const storedSession = useBattleSession();
-  const activeSession = storedSession && (
+  const belongsToCurrentPlayer = authSession
+    ? storedSession?.ownerUserId === authSession.user.id
+    : storedSession?.ownerUserId == null;
+  const activeSession = storedSession && belongsToCurrentPlayer && (
     serverBattleId
       ? storedSession.serverBattleId === serverBattleId || storedSession.sharedBattleId === serverBattleId
       : challengeCode
@@ -113,8 +117,7 @@ function Battle() {
     };
   }, [activeSession, loadMarket, serverBattle?.status, started]);
 
-  const player = draft ?? defaultPracticeDraft();
-  const activePlayerPicks: ScoredPick[] = activeSession?.playerPicks ?? player.picks;
+  const activePlayerPicks: ScoredPick[] = useMemo(() => activeSession?.playerPicks ?? draft?.picks ?? [], [activeSession?.playerPicks, draft?.picks]);
   const activeRivalPicks: ScoredPick[] = activeSession?.rivalPicks ?? challengerPicks ?? rival.picks;
   const battleTickers = useMemo(() => [...new Set([...activePlayerPicks, ...activeRivalPicks].map((pick) => pick.ticker))], [activePlayerPicks, activeRivalPicks]);
   const pricesUsable = hasUsablePrices(battleTickers, currentPrices);
@@ -134,6 +137,7 @@ function Battle() {
   const feedTimestamp = currentPrices.reduce((latest, point) => point.updatedAt > latest ? point.updatedAt : latest, "");
 
   async function enterBattle() {
+    if (!draft) return;
     setLoadingMarket(true);
     setMarketError(null);
     try {
@@ -144,17 +148,18 @@ function Battle() {
       if (challenge && Date.parse(challenge.endsAt) <= Date.now()) throw new Error("This challenge has ended. Ask the player for a rematch link.");
       let joinedBattle = serverBattle;
       if (serverBattleId) {
-        joinedBattle = await joinDurableBattle(serverBattleId, player.picks);
+        joinedBattle = await joinDurableBattle(serverBattleId, draft.picks);
         setServerBattle(joinedBattle);
       }
       const session = createBattleSession({
-        playerDraftId: player.id,
-        playerPicks: player.picks,
+        playerDraftId: draft.id,
+        playerPicks: draft.picks,
         rivalPicks: joinedBattle?.player_picks ?? activeRivalPicks,
         openingPrices: joinedBattle?.opening_prices ?? challenge?.openingPrices ?? prices,
         challengeCode: serverBattleId ? null : challengeCode,
         serverBattleId: serverBattleId ?? null,
         serverRole: serverBattleId ? "opponent" : null,
+        ownerUserId: authSession?.user.id ?? null,
         battleId: joinedBattle?.id ?? challenge?.id,
         endsAt: joinedBattle?.ends_at ?? challenge?.endsAt ?? undefined,
       });
@@ -209,7 +214,27 @@ function Battle() {
     window.setTimeout(() => setShareState("idle"), 1800);
   }
 
-  if (serverLoading) return <div className="shell page-shell"><p className="eyebrow hazard">LOADING SERVER CHALLENGE…</p></div>;
+  if (serverLoading || (!activeSession && teamLoading)) return <div className="shell page-shell"><p className="eyebrow hazard">LOADING YOUR TEAM…</p></div>;
+
+  if (!activeSession && !draft) {
+    const returnPath = serverBattleId
+      ? `/battle/demo?battle=${encodeURIComponent(serverBattleId)}`
+      : challengeCode
+        ? `/battle/demo?challenge=${encodeURIComponent(challengeCode)}`
+        : "/battle/demo";
+    return (
+      <div className="shell page-shell battle-page">
+        <header className="dashboard-titlebar battle-titlebar">
+          <div><p className="eyebrow hazard">TEAM REQUIRED</p><h1>Bring your own lineup</h1></div>
+          <span className="battle-mode">NO MONEY AT RISK</span>
+        </header>
+        <section className="battle-lobby dashboard-panel">
+          <div><p className="eyebrow">DRAFT BEFORE YOU BATTLE</p><strong>{teamLoadError ? "YOUR TEAM COULD NOT BE LOADED" : challengerPicks ? "YOUR OPPONENT IS WAITING" : "BUILD YOUR FIRST TEAM"}</strong><p>{teamLoadError ?? "Choose three to five stocks and allocate the full virtual $1,000. This team will be yours across future battles; each match locks a snapshot when it begins."}</p></div>
+          <Link className="primary-action" href={`/draft?returnTo=${encodeURIComponent(returnPath)}`}>{challengerPicks ? "DRAFT TEAM TO ACCEPT" : "DRAFT YOUR TEAM"} <ArrowRight size={16} /></Link>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="shell page-shell battle-page">
@@ -217,10 +242,6 @@ function Battle() {
         <div><p className="eyebrow hazard">PRACTICE BATTLE · {challengerPicks ? "PLAYER CHALLENGE" : "MATCH 0007"}</p><h1>Head to head</h1></div>
         <span className="battle-mode">NO MONEY AT RISK</span>
       </header>
-
-      {!draft && (
-        <div className="practice-notice"><p>You are viewing the demo lineup. Build and save a draft to battle with your own picks.</p><Link href="/draft">BUILD A FREE DRAFT <ArrowRight size={14} /></Link></div>
-      )}
 
       {!started ? (
         <section className="battle-lobby dashboard-panel">

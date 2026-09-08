@@ -1,4 +1,5 @@
 import type { PricePoint, ScoredPick } from "./battle-scoring.ts";
+import { VIRTUAL_BUDGET } from "./allocations.ts";
 import { STOCKS } from "./stocks.ts";
 
 export type BattleRecord = {
@@ -33,7 +34,7 @@ export function normalizeLineup(value: unknown): ScoredPick[] | null {
   if (picks.some((pick) => !pick || typeof pick.ticker !== "string" || !allowed.has(pick.ticker) || !Number.isInteger(pick.virtualAmount) || Number(pick.virtualAmount) <= 0)) return null;
   const normalized = picks as ScoredPick[];
   if (new Set(normalized.map((pick) => pick.ticker)).size !== normalized.length) return null;
-  return normalized.reduce((sum, pick) => sum + pick.virtualAmount, 0) === 100_000 ? normalized : null;
+  return normalized.reduce((sum, pick) => sum + pick.virtualAmount, 0) === VIRTUAL_BUDGET ? normalized : null;
 }
 
 export function isUuid(value: string) {

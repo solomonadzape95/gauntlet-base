@@ -7,15 +7,15 @@ Updated: September 8, 2026
 - Simple landing loop: `PLAY → market strip → OWN`.
 - Three-to-five stock selection with centered, brand-colour dither logos.
 - Logo-local dither pulse on selection.
-- Editable $100,000 virtual allocation with exact-total validation.
-- Free virtual drafts saved in the browser without a wallet or deposit.
+- One active $1,000 virtual team per player with exact-total validation.
+- Free virtual teams saved through a private account/guest API, with browser fallback when persistence is unavailable.
 - Player desk at `/me` showing the latest lineup, weighted practice return, activity, and battle entry.
 - Refresh-safe practice battles using official Base Chainlink total-return feeds, immutable openings, feed freshness, weighted scoring, ties, and final states.
 - Portable two-browser challenge links sharing one battle identity, opening snapshot, and end time.
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
 - Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
 - Server-enforced location checks on both indicative and executable purchase quotes.
-- The user has applied the least-privilege Supabase game-record migration; durable challenge UI/API still needs the local server secret and live two-browser validation.
+- The least-privilege Supabase game-record backend and local server secret are configured; live two-browser validation is still required.
 - Challenge creation, successful sharing, and opponent joins have durable funnel events in migration `202609080003_battle_events.sql`.
 - Public impact dashboard truthfully showing zero until balance-verified server records exist, with BaseScan links as independent proof.
 
@@ -23,10 +23,9 @@ Updated: September 8, 2026
 
 ### 1. Durable game backend
 
-- Validate the applied Supabase tables for drafts, picks, purchase attempts, battles, and battle snapshots through the configured server API.
-- Replace browser-only draft storage with signed server persistence while keeping guest play frictionless.
-- Install the server secret, apply the migration, then validate creator/opponent synchronization against the live project.
-- Apply `202609080003_battle_events.sql` and verify one deduplicated event row for each challenge funnel step.
+- Apply `202609080004_active_teams.sql`, then validate one active $1,000 team per signed-in account and guest browser.
+- Bind durable battle creator/opponent roles to account or guest identities so a player cannot accept their own challenge.
+- Validate creator/opponent synchronization and deduplicated funnel events against the live project.
 
 ### 2. Real scoring data
 

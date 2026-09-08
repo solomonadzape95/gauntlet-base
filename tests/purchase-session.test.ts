@@ -12,9 +12,9 @@ import {
 } from "../lib/purchase-session.ts";
 
 const picks = [
-  { ticker: "NVDAc", virtualAmount: 33_334, allocationCents: 167 },
-  { ticker: "AAPLc", virtualAmount: 33_333, allocationCents: 167 },
-  { ticker: "TSLAc", virtualAmount: 33_333, allocationCents: 166 },
+  { ticker: "NVDAc", virtualAmount: 334, allocationCents: 167 },
+  { ticker: "AAPLc", virtualAmount: 333, allocationCents: 167 },
+  { ticker: "TSLAc", virtualAmount: 333, allocationCents: 166 },
 ];
 
 test("creates a recoverable ready row for every pick", () => {

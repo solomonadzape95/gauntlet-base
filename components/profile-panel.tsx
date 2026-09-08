@@ -8,14 +8,14 @@ import { useAccount } from "wagmi";
 import { DitherAvatar } from "@/components/dither-avatar";
 import { AVATAR_TONES, type AvatarTone, useGauntletAuth } from "@/components/gauntlet-auth";
 import { WalletButton } from "@/components/wallet-button";
-import { usePracticeDrafts } from "@/lib/use-practice-drafts";
+import { useActiveTeam } from "@/lib/use-active-team";
 
 const shortAddress = (address: string) => `${address.slice(0, 8)}…${address.slice(-6)}`;
 
 export function ProfilePanel() {
   const { address, connector, isConnected } = useAccount();
   const auth = useGauntletAuth();
-  const drafts = usePracticeDrafts();
+  const { team } = useActiveTeam();
   const profileKey = auth.profile?.updated_at || address || "new";
   const [form, setForm] = useState<{ key: string; username: string; tone: AvatarTone }>({ key: "", username: "", tone: "hazard" });
   const username = form.key === profileKey ? form.username : auth.profile?.username || "";
@@ -114,7 +114,7 @@ export function ProfilePanel() {
         <div className="profile-side">
           <section className="profile-card player-stats">
             <p className="eyebrow">PLAYER RECORD</p>
-            <div><span><small>DRAFTS</small><strong>{drafts.length}</strong></span><span><small>BATTLES</small><strong>{drafts.length ? "READY" : "—"}</strong></span></div>
+            <div><span><small>TEAM</small><strong>{team ? `${team.picks.length} PICKS` : "—"}</strong></span><span><small>BATTLES</small><strong>{team ? "READY" : "—"}</strong></span></div>
             <Link className="secondary-action full" href="/draft"><Swords size={16} /> BUILD A NEW LINEUP</Link>
           </section>
 

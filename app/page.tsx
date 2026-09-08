@@ -17,7 +17,7 @@ export default function Home() {
         <div className="landing-pitch">
           <p className="eyebrow">PRACTICE FIRST · POWERED BY BASE</p>
           <h2>Build the portfolio before you buy it.</h2>
-          <p>Draft a $100,000 virtual lineup with no wallet or deposit. If you like your call, eligible players can later buy a small version using tokenized stocks [digital tokens that track stock value].</p>
+          <p>Draft a $1,000 virtual team with no wallet or deposit. If you like your call, eligible players can later buy a small version using tokenized stocks [digital tokens that track stock value].</p>
           <div className="hero-actions">
             <Link className="primary-action" href="/draft">BUILD A LINEUP <ArrowRight size={18} /></Link>
             <Link className="secondary-action" href="/battle/demo">WATCH A BATTLE</Link>

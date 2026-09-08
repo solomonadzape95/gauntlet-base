@@ -12,7 +12,7 @@ test("priceReturn calculates movement from the locked opening value", () => {
 });
 
 test("scoreLineup weights returns by virtual allocation", () => {
-  const picks = [{ ticker: "AAPLc", virtualAmount: 75_000 }, { ticker: "NVDAc", virtualAmount: 25_000 }];
+  const picks = [{ ticker: "AAPLc", virtualAmount: 750 }, { ticker: "NVDAc", virtualAmount: 250 }];
   const start = [point("AAPLc", 100), point("NVDAc", 100)];
   const current = [point("AAPLc", 110), point("NVDAc", 80)];
   assert.ok(Math.abs(scoreLineup(picks, start, current) - 2.5) < 1e-9);

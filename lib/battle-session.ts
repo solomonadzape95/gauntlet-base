@@ -10,6 +10,7 @@ export type BattleSession = {
   serverBattleId: string | null;
   sharedBattleId: string | null;
   serverRole: "creator" | "opponent" | null;
+  ownerUserId: string | null;
   playerDraftId: string;
   playerPicks: ScoredPick[];
   rivalPicks: ScoredPick[];
@@ -29,6 +30,7 @@ export function createBattleSession(input: {
   serverBattleId?: string | null;
   sharedBattleId?: string | null;
   serverRole?: "creator" | "opponent" | null;
+  ownerUserId?: string | null;
   battleId?: string;
   endsAt?: string;
 }): BattleSession {
@@ -40,6 +42,7 @@ export function createBattleSession(input: {
     serverBattleId: input.serverBattleId ?? null,
     sharedBattleId: input.sharedBattleId ?? null,
     serverRole: input.serverRole ?? null,
+    ownerUserId: input.ownerUserId ?? null,
     playerDraftId: input.playerDraftId,
     playerPicks: input.playerPicks,
     rivalPicks: input.rivalPicks,
@@ -62,7 +65,8 @@ export function parseBattleSession(snapshot: string | null): BattleSession | nul
     if (value.serverBattleId !== undefined && value.serverBattleId !== null && typeof value.serverBattleId !== "string") return null;
     if (value.sharedBattleId !== undefined && value.sharedBattleId !== null && typeof value.sharedBattleId !== "string") return null;
     if (value.serverRole !== undefined && value.serverRole !== null && value.serverRole !== "creator" && value.serverRole !== "opponent") return null;
-    return { ...value, challengeCode: value.challengeCode ?? null, serverBattleId: value.serverBattleId ?? null, sharedBattleId: value.sharedBattleId ?? null, serverRole: value.serverRole ?? null } as BattleSession;
+    if (value.ownerUserId !== undefined && value.ownerUserId !== null && typeof value.ownerUserId !== "string") return null;
+    return { ...value, challengeCode: value.challengeCode ?? null, serverBattleId: value.serverBattleId ?? null, sharedBattleId: value.sharedBattleId ?? null, serverRole: value.serverRole ?? null, ownerUserId: value.ownerUserId ?? null } as BattleSession;
   } catch {
     return null;
   }
