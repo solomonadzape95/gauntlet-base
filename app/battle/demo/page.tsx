@@ -34,7 +34,7 @@ function Battle() {
   const storedSession = useBattleSession();
   const activeSession = storedSession && (
     serverBattleId
-      ? storedSession.serverBattleId === serverBattleId
+      ? storedSession.serverBattleId === serverBattleId || storedSession.sharedBattleId === serverBattleId
       : challengeCode
         ? storedSession.challengeCode === challengeCode && !storedSession.serverBattleId
         : true
@@ -67,14 +67,17 @@ function Battle() {
 
   const loadMarket = useCallback(async () => {
     const saved = readBattleSession();
-    if (saved?.serverBattleId && (!serverBattleId || saved.serverBattleId === serverBattleId)) {
-      const result = await fetchDurableBattle(saved.serverBattleId);
+    const durableId = serverBattleId && (saved?.serverBattleId === serverBattleId || saved?.sharedBattleId === serverBattleId)
+      ? serverBattleId
+      : !serverBattleId ? saved?.serverBattleId : null;
+    if (saved && durableId) {
+      const result = await fetchDurableBattle(durableId);
       if (result.battle.status === "waiting" || !result.battle.opening_prices || !result.battle.starts_at || !result.battle.ends_at) {
         setServerBattle(result.battle);
         setMarketPreview(result.currentPrices);
         return result.currentPrices;
       }
-      const creator = saved.serverRole !== "opponent";
+      const creator = saved.sharedBattleId === durableId || saved.serverRole !== "opponent";
       const next = {
         ...saved,
         playerPicks: creator ? result.battle.player_picks : result.battle.opponent_picks ?? saved.playerPicks,
@@ -126,7 +129,7 @@ function Battle() {
   const strongestPick = holdings.reduce((best, item) => item[1] > best[1] ? item : best, holdings[0] ?? ["—", 0] as const);
   const canOwnBattleDraft = Boolean(draft && activeSession?.playerDraftId === draft.id);
   const isComplete = Boolean(activeSession && remainingBattleSeconds(activeSession) === 0);
-  const awaitingOpponent = Boolean(activeSession?.serverBattleId && serverBattle?.status === "waiting");
+  const awaitingOpponent = Boolean(serverBattleId && activeSession && serverBattle?.status === "waiting");
   const isTie = Math.abs(playerScore - rivalScore) < 0.000_001;
   const feedTimestamp = currentPrices.reduce((latest, point) => point.updatedAt > latest ? point.updatedAt : latest, "");
 
@@ -174,15 +177,14 @@ function Battle() {
       openingPrices: activeSession.openingPrices,
     });
     let url = `${window.location.origin}/battle/demo?challenge=${code}`;
-    let durableBattleId = activeSession.serverBattleId;
-    if (activeSession.serverBattleId) {
-      url = `${window.location.origin}/battle/demo?battle=${activeSession.serverBattleId}`;
+    let durableBattleId = activeSession.serverBattleId ?? activeSession.sharedBattleId;
+    if (durableBattleId) {
+      url = `${window.location.origin}/battle/demo?battle=${durableBattleId}`;
     } else {
       try {
         const battle = await createDurableBattle(activePlayerPicks);
-        const next = { ...activeSession, serverBattleId: battle.id, serverRole: "creator" as const };
+        const next = { ...activeSession, sharedBattleId: battle.id, serverRole: "creator" as const };
         saveBattleSession(next);
-        setServerBattle(battle);
         durableBattleId = battle.id;
         url = `${window.location.origin}/battle/demo?battle=${battle.id}`;
       } catch {
@@ -228,7 +230,12 @@ function Battle() {
       ) : (
         <>
           <div className="battle-status"><span><Radio size={14} /> {awaitingOpponent ? "CHALLENGE OPEN" : isComplete ? "FINAL · CHAINLINK" : pricesUsable ? "LIVE · CHAINLINK" : "FEED HELD"}{feedTimestamp ? ` · ${new Date(feedTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}</span><span><Clock3 size={14} /> {awaitingOpponent ? "WAITING FOR OPPONENT" : isComplete ? "COMPLETE" : `${formatDuration(remaining)} REMAINING`}</span></div>
-          <section className="versus-grid">
+          {awaitingOpponent ? (
+            <section className="battle-lobby dashboard-panel">
+              <div><p className="eyebrow hazard">CHALLENGE SENT</p><strong>{activePlayerPicks.map((pick) => pick.ticker).join(" · ")}</strong><p>Your original practice battle is unchanged. This new head-to-head starts—and locks its Chainlink opening prices—when your opponent enters with their lineup.</p></div>
+            </section>
+          ) : <>
+            <section className="versus-grid">
             <Competitor name="YOU" score={playerScore} rank={isTie ? "T" : leading ? "01" : "02"} stocks={holdings} leading={!isTie && leading} />
             <div className="versus-mark">VS</div>
             <Competitor name={activeSession?.serverRole === "creator" ? "OPPONENT" : challengerPicks ? "CHALLENGER" : "NOVA"} score={rivalScore} rank={isTie ? "T" : leading ? "02" : "01"} stocks={activeRivalPicks.map((pick) => {
@@ -236,13 +243,14 @@ function Battle() {
               const current = currentPrices.find((item) => item.ticker === pick.ticker)?.price ?? 0;
               return [pick.ticker, priceReturn(opening, current)] as const;
             })} leading={!isTie && !leading} />
-          </section>
-          <section className="battle-proof"><ShieldCheck size={20} /><div><strong>CHAINLINK TOTAL-RETURN SCORE</strong><p>This battle uses virtual funds and official Base feed addresses. Owning stocks is optional and never changes the score.{marketError ? ` ${marketError}` : ""}</p></div></section>
-          <section className="battle-conversion dashboard-panel">
+            </section>
+            <section className="battle-proof"><ShieldCheck size={20} /><div><strong>CHAINLINK TOTAL-RETURN SCORE</strong><p>This battle uses virtual funds and official Base feed addresses. Owning stocks is optional and never changes the score.{marketError ? ` ${marketError}` : ""}</p></div></section>
+            <section className="battle-conversion dashboard-panel">
             <div className="battle-conversion-copy"><p className="checkpoint-heading">{isComplete ? "FINAL LINEUP RESULT" : "LIVE LINEUP CHECKPOINT"}</p><h2><span>PNL</span>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}%</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
             <div className="battle-conversion-art" aria-hidden />
             <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
-          </section>
+            </section>
+          </>}
           <button className="secondary-action battle-share" disabled={shareState === "creating"} onClick={() => void shareChallenge()}>{shareState === "idle" || shareState === "creating" ? <Copy size={15} /> : <Check size={15} />}{shareState === "creating" ? "CREATING CHALLENGE…" : shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
         </>
       )}

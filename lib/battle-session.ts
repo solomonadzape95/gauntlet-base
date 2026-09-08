@@ -8,6 +8,7 @@ export type BattleSession = {
   id: string;
   challengeCode: string | null;
   serverBattleId: string | null;
+  sharedBattleId: string | null;
   serverRole: "creator" | "opponent" | null;
   playerDraftId: string;
   playerPicks: ScoredPick[];
@@ -26,6 +27,7 @@ export function createBattleSession(input: {
   now?: Date;
   challengeCode?: string | null;
   serverBattleId?: string | null;
+  sharedBattleId?: string | null;
   serverRole?: "creator" | "opponent" | null;
   battleId?: string;
   endsAt?: string;
@@ -36,6 +38,7 @@ export function createBattleSession(input: {
     id: input.battleId ?? `battle-${now.getTime().toString(36)}`,
     challengeCode: input.challengeCode ?? null,
     serverBattleId: input.serverBattleId ?? null,
+    sharedBattleId: input.sharedBattleId ?? null,
     serverRole: input.serverRole ?? null,
     playerDraftId: input.playerDraftId,
     playerPicks: input.playerPicks,
@@ -57,8 +60,9 @@ export function parseBattleSession(snapshot: string | null): BattleSession | nul
     if (!isPrices(value.openingPrices) || !isPrices(value.currentPrices)) return null;
     if (value.challengeCode !== undefined && value.challengeCode !== null && typeof value.challengeCode !== "string") return null;
     if (value.serverBattleId !== undefined && value.serverBattleId !== null && typeof value.serverBattleId !== "string") return null;
+    if (value.sharedBattleId !== undefined && value.sharedBattleId !== null && typeof value.sharedBattleId !== "string") return null;
     if (value.serverRole !== undefined && value.serverRole !== null && value.serverRole !== "creator" && value.serverRole !== "opponent") return null;
-    return { ...value, challengeCode: value.challengeCode ?? null, serverBattleId: value.serverBattleId ?? null, serverRole: value.serverRole ?? null } as BattleSession;
+    return { ...value, challengeCode: value.challengeCode ?? null, serverBattleId: value.serverBattleId ?? null, sharedBattleId: value.sharedBattleId ?? null, serverRole: value.serverRole ?? null } as BattleSession;
   } catch {
     return null;
   }

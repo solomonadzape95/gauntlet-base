@@ -15,8 +15,9 @@ test("creates a 24-hour battle with an immutable opening snapshot", () => {
 });
 
 test("parses a valid persisted battle and rejects malformed state", () => {
-  const session = createBattleSession({ playerDraftId: "draft-1", playerPicks: picks, rivalPicks: picks, openingPrices: prices, serverBattleId: "550e8400-e29b-41d4-a716-446655440000", serverRole: "creator" });
+  const session = createBattleSession({ playerDraftId: "draft-1", playerPicks: picks, rivalPicks: picks, openingPrices: prices, sharedBattleId: "550e8400-e29b-41d4-a716-446655440000", serverRole: "creator" });
   assert.equal(parseBattleSession(JSON.stringify(session))?.serverRole, "creator");
+  assert.equal(parseBattleSession(JSON.stringify(session))?.sharedBattleId, "550e8400-e29b-41d4-a716-446655440000");
   assert.equal(parseBattleSession('{"version":1}'), null);
   assert.equal(parseBattleSession(JSON.stringify({ ...session, serverRole: "spectator" })), null);
   assert.equal(parseBattleSession("not json"), null);

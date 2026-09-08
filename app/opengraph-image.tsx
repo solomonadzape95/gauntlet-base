@@ -7,12 +7,12 @@ export const alt = "Gauntlet — Draft, battle, and optionally own tokenized sto
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const geistPixel = readFile(join(process.cwd(), "public/fonts/GeistPixel-Circle.ttf"));
-const gauntletLogo = readFile(join(process.cwd(), "public/gauntlet-logo-1024.png")).then((data) => `data:image/png;base64,${data.toString("base64")}`);
+const geistPixelFontPromise = readFile(join(process.cwd(), "public/fonts/GeistPixel-Circle.ttf"));
+const logoDataUriPromise = readFile(join(process.cwd(), "public/gauntlet-logo-1024.png")).then((data) => `data:image/png;base64,${data.toString("base64")}`);
 
 export default async function OpenGraphImage() {
-  const font = await geistPixel;
-  const logo = await gauntletLogo;
+  const font = await geistPixelFontPromise;
+  const logo = await logoDataUriPromise;
 
   return new ImageResponse(
     <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", overflow: "hidden", padding: "48px 54px", background: "#07080a", color: "#f4f2ee", fontFamily: "Geist Pixel", border: "2px solid #242932" }}>
