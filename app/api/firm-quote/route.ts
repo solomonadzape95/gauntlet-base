@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isAddress, isHex } from "viem";
 
 import { getStock } from "@/lib/stocks";
-import { eligibilityMessage, getRequestEligibility } from "@/lib/eligibility";
+import { getPurchaseEligibilityFailure } from "@/lib/eligibility";
 
 const BASE_CHAIN_ID = 8453;
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -34,13 +34,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Connect a valid wallet before preparing a purchase." }, { status: 400 });
   }
 
-  const eligibility = getRequestEligibility(request);
-  if (!eligibility.eligible) {
-    return NextResponse.json(
-      { error: eligibilityMessage(eligibility), code: eligibility.reason },
-      { status: 403 },
-    );
-  }
+  const eligibilityFailure = getPurchaseEligibilityFailure(request);
+  if (eligibilityFailure) return NextResponse.json(eligibilityFailure, { status: 403 });
 
   const apiKey = process.env.ZEROX_API_KEY;
   if (!apiKey) {

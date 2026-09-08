@@ -3,7 +3,7 @@ import { isAddress } from "viem";
 
 import { getStock } from "@/lib/stocks";
 import { allocateByWeight, VIRTUAL_BUDGET } from "@/lib/allocations";
-import { eligibilityMessage, getRequestEligibility } from "@/lib/eligibility";
+import { getPurchaseEligibilityFailure } from "@/lib/eligibility";
 
 const BASE_CHAIN_ID = 8453;
 const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -37,13 +37,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Connect a valid wallet before requesting prices." }, { status: 400 });
   }
 
-  const eligibility = getRequestEligibility(request);
-  if (!eligibility.eligible) {
-    return NextResponse.json(
-      { error: eligibilityMessage(eligibility), code: eligibility.reason },
-      { status: 403 },
-    );
-  }
+  const eligibilityFailure = getPurchaseEligibilityFailure(request);
+  if (eligibilityFailure) return NextResponse.json(eligibilityFailure, { status: 403 });
 
   const validAllocations = allocations.every((allocation): allocation is RequestedAllocation => {
     if (!allocation || typeof allocation !== "object") return false;

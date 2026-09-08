@@ -269,7 +269,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .receive-list i { width: 8px; height: 8px; }
 .receive-list strong { font: 400 13px/1 var(--font-utility); }
 .receive-list .receive-value { align-items: flex-end; flex-direction: column; gap: 5px; }
-.purchase-row-status { color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .08em; }
+.purchase-row-status { color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .08em; }
 .purchase-row-status.confirmed { color: var(--signal); }
 .purchase-row-status.submitted { color: var(--ink); }
 .purchase-row-status.failed { color: var(--ember); }
@@ -303,7 +303,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-complete span { margin-top: 5px; color: var(--dim); font-size: 11px; }
 .ownership-reveal { padding-block: 20px; background: color-mix(in srgb,var(--signal) 6%,transparent); }
 .receipt-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(90px,1fr)); gap: 6px; margin-top: 9px; }
-.receipt-list a { padding: 9px 5px; border: 1px solid var(--edge); color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .06em; text-align: center; }
+.receipt-list a { padding: 9px 5px; border: 1px solid var(--edge); color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .06em; text-align: center; }
 .receipt-list a:hover { border-color: var(--signal); color: var(--signal); }
 .spin { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -34,7 +34,7 @@ function Battle() {
   const [marketPreview, setMarketPreview] = useState<PricePoint[]>([]);
   const [marketError, setMarketError] = useState<string | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "shared">("idle");
   const openingPrices = activeSession?.openingPrices ?? [];
   const currentPrices = activeSession?.currentPrices ?? marketPreview;
 
@@ -105,7 +105,7 @@ function Battle() {
     }
   }
 
-  async function copyChallenge() {
+  async function shareChallenge() {
     if (!activeSession) return;
     const code = encodeChallenge({
       id: activeSession.id,
@@ -114,9 +114,19 @@ function Battle() {
       openingPrices: activeSession.openingPrices,
     });
     const url = `${window.location.origin}/battle/demo?challenge=${code}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Gauntlet practice battle", text: "Run your lineup against mine on Gauntlet.", url });
+        setShareState("shared");
+        window.setTimeout(() => setShareState("idle"), 1800);
+        return;
+      } catch (cause) {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+      }
+    }
     await navigator.clipboard.writeText(url);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+    setShareState("copied");
+    window.setTimeout(() => setShareState("idle"), 1800);
   }
 
   return (
@@ -152,7 +162,7 @@ function Battle() {
             <div><p className="eyebrow hazard">{isComplete ? "FINAL LINEUP RESULT" : "LIVE LINEUP CHECKPOINT"}</p><h2>{playerScore >= 0 ? "+" : ""}{playerScore.toFixed(2)}% {isComplete ? "FINAL." : "SO FAR."}</h2><p>{strongestPick[0]} is currently the strongest contributor at {strongestPick[1] >= 0 ? "+" : ""}{strongestPick[1].toFixed(2)}%. If you want real exposure, buy a small version of this exact lineup; ownership never changes the game score.</p></div>
             <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
           </section>
-          <button className="secondary-action battle-share" onClick={() => void copyChallenge()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
+          <button className="secondary-action battle-share" onClick={() => void shareChallenge()}>{shareState === "idle" ? <Copy size={15} /> : <Check size={15} />}{shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "CHALLENGE A FRIEND"}</button>
         </>
       )}
     </div>

@@ -30,6 +30,14 @@ export function getRequestEligibility(request: Request): PurchaseEligibility {
   });
 }
 
+export function getPurchaseEligibilityFailure(request: Request) {
+  const eligibility = getRequestEligibility(request);
+  return eligibility.eligible ? null : {
+    error: eligibilityMessage(eligibility),
+    code: eligibility.reason,
+  };
+}
+
 export function eligibilityMessage(eligibility: PurchaseEligibility): string {
   if (eligibility.reason === "us_blocked") {
     return "Tokenized stock purchases are not available to US residents yet. Practice mode remains open.";
