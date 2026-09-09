@@ -115,7 +115,7 @@ export function StockProofPanel({ ticker, savedCost, marketQuote, onClose }: { t
       <>
         <div className="stock-proof-metrics">
           <article><small>LIVE PRICE</small><strong>{quote ? `$${quote.price.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "HELD"}</strong><span>{!quoteIsCaptured ? "PREVIEW PRICE" : quote?.fresh ? "FRESH FEED" : "WAITING FOR FEED"}</span></article>
-          <article><small>DRAFT COST</small><strong>{savedCost ?? quote?.draftCost ?? "—"}{savedCost || quote?.draftCost ? " CR" : ""}</strong><span>{savedCost ? "YOUR LOCKED COST" : "CURRENT MARKET"}</span></article>
+          <article><small>DRAFT COST</small><strong>{savedCost ?? quote?.draftCost ?? "—"}{savedCost || quote?.draftCost ? " CR" : ""}</strong><span>{marketQuote ? "CURRENT MARKET" : savedCost ? "LOCKED GAME WEEK" : "CURRENT MARKET"}</span></article>
           <article><small>GAME WEEK MOVE</small><strong className={move != null && move < 0 ? "down" : "up"}>{move == null ? "PENDING" : `${move >= 0 ? "+" : ""}${move.toFixed(2)}%`}</strong><span>{detail?.gameWeek?.label ?? (!detail ? "SYNCING WEEK" : "NO ACTIVE WEEK")}</span></article>
           <article><small>YOUR B20</small><strong>{!address ? "NOT CONNECTED" : balanceLoading ? "READING" : formattedBalance ?? "UNAVAILABLE"}</strong><span>{address ? compactAddress(address) : "CONNECT TO VERIFY"}</span></article>
         </div>

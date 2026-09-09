@@ -24,27 +24,19 @@ test("prices a valid affordable squad and leaves the rest in the bank", () => {
   assert.equal(priceSquad(["NVDAc", "AAPLc", "TSLAc"], market.map((item) => ({ ...item, draftCost: 500 }))), null);
 });
 
-test("keeps saved costs for retained stocks and prices only incoming transfers at market", () => {
-  const saved = [
-    { ticker: "NVDAc", virtualAmount: 250 },
-    { ticker: "AAPLc", virtualAmount: 250 },
-    { ticker: "TSLAc", virtualAmount: 250 },
-    { ticker: "MSFTc", virtualAmount: 250 },
-  ];
+test("reprices every editable team stock from the same current market", () => {
   const market = createDraftMarket([
     point("NVDAc", 226),
-    point("AAPLc", 316),
+    point("AMZNc", 258),
     point("TSLAc", 367),
-    point("MSFTc", 494),
-    point("MSTRc", 138),
+    point("MSTRc", 139),
   ]);
 
-  assert.deepEqual(priceTransferSquad(["NVDAc", "AAPLc", "TSLAc", "MSFTc"], saved, market), saved);
-  assert.deepEqual(priceTransferSquad(["NVDAc", "AAPLc", "TSLAc", "MSTRc"], saved, market), [
-    { ticker: "NVDAc", virtualAmount: 250 },
-    { ticker: "AAPLc", virtualAmount: 250 },
-    { ticker: "TSLAc", virtualAmount: 250 },
-    { ticker: "MSTRc", virtualAmount: 138 },
+  assert.deepEqual(priceTransferSquad(["NVDAc", "AMZNc", "TSLAc", "MSTRc"], market), [
+    { ticker: "NVDAc", virtualAmount: 226 },
+    { ticker: "AMZNc", virtualAmount: 258 },
+    { ticker: "TSLAc", virtualAmount: 367 },
+    { ticker: "MSTRc", virtualAmount: 139 },
   ]);
 });
 

@@ -8,6 +8,7 @@ Updated: September 9, 2026
 - Three-to-five stock selection with centered, brand-colour dither logos.
 - Logo-local dither pulse on selection.
 - One active team per player, assembled from server-derived onchain Draft Costs within a 1,000-credit Squad Budget.
+- One canonical current Draft Cost across the editable squad, transfer bank, market, stock detail, and save path; legacy equal-split `250 CR` values no longer override live market costs.
 - Team headquarters at `/draft` with Squad, Transfers, and Market views, Bank, current points, player identity, and responsive layouts.
 - Transfer-window locking during active Game Weeks, one free incoming stock, and 25-point deductions for later transfers.
 - Free virtual teams saved through a private account/guest API, with browser fallback when persistence is unavailable.
@@ -28,6 +29,7 @@ Updated: September 9, 2026
 - The least-privilege Supabase game-record backend and local server secret are configured; live two-browser validation is still required.
 - Challenge creation, successful sharing, and opponent joins have durable funnel events in migration `202609080003_battle_events.sql`.
 - Public impact dashboard truthfully showing zero until balance-verified server records exist, with BaseScan links as independent proof.
+- Two share-card surfaces: the global Gauntlet OG card and an opponent-aware challenge card with both team names, lineups, duration, state, real logo, Geist Pixel, and yellow dither.
 
 ## Submission-critical work left
 
@@ -48,7 +50,7 @@ Updated: September 9, 2026
 
 - Mainnet-test minimum viable order sizes for every supported stock.
 - Reconcile client recovery records into private server records after wallet authentication.
-- Confirm Builder Code attribution on every supported transaction path.
+- Confirm the configured ERC-8021 Builder Code attribution on one real approval and swap transaction.
 
 ### 4. Eligibility and safety
 
@@ -66,7 +68,7 @@ Updated: September 9, 2026
 
 - Deploy a production preview with server-side environment variables.
 - Run mobile wallet tests and at least ten uncoached user sessions.
-- Capture result/challenge screenshots, thumbnail, demo battle, and a 75–90 second submission video.
+- Capture the rendered global/challenge cards, demo battle, and a 75–90 second submission video.
 - Freeze features after the critical loop succeeds repeatedly.
 
 ## Explicitly later

@@ -23,30 +23,24 @@ export function createDraftMarket(prices: PricePoint[]): DraftMarketStock[] {
   });
 }
 
-export function priceSquad(tickers: string[], market: DraftMarketStock[]): ScoredPick[] | null {
+export function priceSelectionAtMarket(tickers: string[], market: DraftMarketStock[]): ScoredPick[] | null {
   if (tickers.length < 3 || tickers.length > 5 || new Set(tickers).size !== tickers.length) return null;
   const picks = tickers.map((ticker) => {
     const quote = market.find((item) => item.ticker === ticker);
     return quote?.fresh ? { ticker, virtualAmount: quote.draftCost } : null;
   });
   if (picks.some((pick) => !pick)) return null;
-  const priced = picks as ScoredPick[];
+  return picks as ScoredPick[];
+}
+
+export function priceSquad(tickers: string[], market: DraftMarketStock[]): ScoredPick[] | null {
+  const priced = priceSelectionAtMarket(tickers, market);
+  if (!priced) return null;
   return priced.reduce((sum, pick) => sum + pick.virtualAmount, 0) <= VIRTUAL_BUDGET ? priced : null;
 }
 
-export function priceTransferSelection(tickers: string[], saved: ScoredPick[], market: DraftMarketStock[]): ScoredPick[] | null {
-  if (tickers.length < 3 || tickers.length > 5 || new Set(tickers).size !== tickers.length) return null;
-  const picks = tickers.map((ticker) => {
-    const retained = saved.find((pick) => pick.ticker === ticker);
-    if (retained) return retained;
-    const quote = market.find((item) => item.ticker === ticker);
-    return quote?.fresh ? { ticker, virtualAmount: quote.draftCost } : null;
-  });
-  return picks.some((pick) => !pick) ? null : picks as ScoredPick[];
-}
-
-export function priceTransferSquad(tickers: string[], saved: ScoredPick[], market: DraftMarketStock[]): ScoredPick[] | null {
-  const priced = priceTransferSelection(tickers, saved, market);
+export function priceTransferSquad(tickers: string[], market: DraftMarketStock[]): ScoredPick[] | null {
+  const priced = priceSelectionAtMarket(tickers, market);
   return priced && squadBank(priced) >= 0 ? priced : null;
 }
 

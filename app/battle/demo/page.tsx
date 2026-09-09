@@ -224,11 +224,11 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
   async function shareChallenge() {
     if (!serverBattleId) return;
     setShareState("creating");
-    const url = `${window.location.origin}/battle/demo?battle=${serverBattleId}`;
+    const url = `${window.location.origin}/challenge/${serverBattleId}`;
     if (navigator.share) {
       try {
         setShareState("idle");
-        await navigator.share({ title: "Gauntlet practice battle", text: "Run your lineup against mine on Gauntlet.", url });
+        await navigator.share({ title: "Gauntlet challenge", text: "Bring your active team and run it against mine on Gauntlet.", url });
         void markDurableBattleShared(serverBattleId, authSession);
         setShareState("shared");
         window.setTimeout(() => setShareState("idle"), 1800);
