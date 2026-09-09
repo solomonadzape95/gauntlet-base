@@ -116,7 +116,7 @@ nav { display: flex; align-self: stretch; }
 .landing-pitch .hero-actions { justify-content: center; }
 .market-strip { position: relative; width: 100%; height: 40svh; overflow: hidden; border-bottom: 1px solid var(--edge); background: var(--surface); }
 .market-strip-label { position: absolute; z-index: 5; top: 14px; left: 50%; transform: translateX(-50%); padding: 8px 11px; border: 1px solid var(--edge); background: color-mix(in srgb,var(--void) 88%,transparent); color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .12em; white-space: nowrap; }
-.market-strip-track { display: flex; width: 100%; height: 100%; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-color: var(--hazard) var(--surface); }
+.market-strip-track { display: flex; width: 100%; height: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-color: var(--hazard) var(--surface); }
 .market-tile { position: relative; width: clamp(300px,28vw,440px); height: 100%; flex: 0 0 auto; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; padding: clamp(26px,2.4vw,38px); border-right: 1px solid var(--edge); background: linear-gradient(155deg,color-mix(in srgb,var(--stock-tone) 11%,var(--surface)),var(--surface) 58%); scroll-snap-align: start; }
 .market-tile::before { content: ""; position: absolute; inset: 0; opacity: .14; background-image: radial-gradient(circle at 1px 1px,var(--stock-tone) .7px,transparent 0); background-size: 4px 4px; mask-image: linear-gradient(to bottom,black,transparent 72%); }
 .market-tile-top { position: relative; z-index: 2; display: flex; justify-content: space-between; font: 500 12px/1 var(--font-utility); letter-spacing: .1em; }
@@ -125,8 +125,8 @@ nav { display: flex; align-self: stretch; }
 .market-tile > div:last-child { position: relative; z-index: 2; }
 .market-tile p { margin: 0 0 8px; color: var(--dim); font-size: 15px; }
 .market-tile > div:last-child > strong { font: 400 clamp(25px,2.2vw,34px)/1 var(--font-utility); }
-.landing-flow { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid var(--edge); }
-.landing-flow article { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 17px 22px 0 0; border-right: 1px solid var(--edge); }
+.landing-flow { grid-column: 1 / -1; width: min(100%,1080px); display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--edge); }
+.landing-flow article { min-height: 94px; display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 16px; padding: 18px 24px; border-right: 1px solid var(--edge); text-align: left; }
 .landing-flow article:last-child { border-right: 0; }
 .landing-flow article > span { color: var(--hazard); font: 400 24px/1 var(--font-utility); }
 .landing-flow strong { font: 500 15px/1 var(--font-utility); letter-spacing: .12em; }
@@ -796,7 +796,6 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
   .hero-copy h1 { font-size: clamp(40px,13vw,62px); }
   .landing { height: auto; min-height: calc(100svh - 108px); display: block; overflow: visible; }
   .market-strip { position: sticky; top: 0; z-index: 1; height: 42svh; min-height: 320px; }
-  .market-strip-track { animation: none; }
   .market-tile { width: min(86vw,390px); height: 100%; padding: 24px; }
   .market-tile-logo { width: min(54%,200px); }
   .landing-story { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr; grid-template-rows: auto; gap: 34px; padding-block: 42px 56px; background: var(--void); }
@@ -805,7 +804,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
   .landing-pitch > p:last-of-type { font-size: 16px; }
   .landing-pitch .hero-actions { align-items: stretch; flex-direction: column; }
   .landing-flow { grid-template-columns: 1fr; }
-  .landing-flow article { padding: 18px 0; border-right: 0; border-bottom: 1px solid var(--edge); }
+  .landing-flow article { min-height: 82px; padding: 18px 20px; border-right: 0; border-bottom: 1px solid var(--edge); }
   .landing-flow article:last-child { border-bottom: 0; }
   .hero-deck { min-height: 410px; }
   .deck-card { width: 62%; }

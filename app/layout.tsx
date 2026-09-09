@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   title: "Gauntlet — Build a lineup. Own a little.",
   description: "Turn a fantasy stock draft into a small real tokenized-stock portfolio on Base.",
   applicationName: "Gauntlet",
+  icons: {
+    icon: [{ url: "/gauntlet-logo-1024.png", type: "image/png", sizes: "1024x1024" }],
+    shortcut: "/gauntlet-logo-1024.png",
+    apple: "/gauntlet-logo-1024.png",
+  },
   openGraph: {
     title: "Gauntlet — Draft. Battle. Own.",
     description: "Build a free fantasy-stock lineup, battle on real market data, and optionally own a small version on Base.",
