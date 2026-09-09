@@ -172,6 +172,11 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     [selected, virtualAllocations],
   );
   const allocationRemaining = VIRTUAL_BUDGET - allocationTotal;
+  const selectionTotal = selected.reduce(
+    (total, ticker) => total + (draftMarket.find((stock) => stock.ticker === ticker)?.draftCost ?? 0),
+    0,
+  );
+  const selectionRemaining = VIRTUAL_BUDGET - selectionTotal;
   const allocationsValid = selected.length >= MIN_PICKS && selected.length <= MAX_PICKS && allocationRemaining >= 0
     && selected.every((ticker) => (virtualAllocations[ticker] ?? 0) > 0);
   const confirmedCount = confirmedPurchaseCount(purchaseSession);
@@ -478,7 +483,14 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                 <h1>DRAFT A <em>PORTFOLIO.</em></h1>
               </div>
               <div className="heading-aside">
-                <p>Choose three to five companies within your 1,000-credit Squad Budget. Draft costs follow current onchain reference prices.</p>
+                <p>Choose three to five companies within your $1,000 virtual budget. Draft costs follow current onchain reference prices.</p>
+                <div className={`draft-budget-live ${selectionRemaining < 0 ? "over" : ""}`}>
+                  <span>VIRTUAL FUNDS LEFT</span>
+                  <strong>{selectionRemaining < 0 ? "−" : ""}${Math.abs(selectionRemaining).toLocaleString()}</strong>
+                  <small>${selectionTotal.toLocaleString()} of ${VIRTUAL_BUDGET.toLocaleString()} used</small>
+                  <div aria-hidden="true"><i style={{ width: `${Math.min(100, (selectionTotal / VIRTUAL_BUDGET) * 100)}%` }} /></div>
+                  <p>Fantasy game funds only — not cash, USDC, or your wallet balance.</p>
+                </div>
                 <div className="selection-count"><span>{selected.length}</span> PICKED <small>3 MIN · 5 MAX</small></div>
               </div>
             </div>
@@ -505,17 +517,18 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
             <div className="page-heading">
               <p className="eyebrow hazard">ROUND 02 · VIRTUAL PORTFOLIO</p>
               <h1>CHECK YOUR <em>SQUAD.</em></h1>
-              <p className="lede">Each stock costs its current draft price. Your unused credits stay in the Bank and earn no return.</p>
+              <p className="lede">Each stock costs its current virtual draft price. Unused game funds stay in the Bank and earn no return.</p>
             </div>
 
             <div className="portfolio-panel">
               <div className="portfolio-total">
                 <span className="eyebrow">BANK AFTER DRAFT</span>
-                <strong>{allocationRemaining} CR</strong>
+                <strong>{allocationRemaining < 0 ? "−" : ""}${Math.abs(allocationRemaining).toLocaleString()}</strong>
                 <span className="status-chip"><span /> VIRTUAL</span>
                 <p className={`allocation-balance ${allocationRemaining < 0 ? "over" : ""}`}>
-                  {allocationRemaining >= 0 ? `${allocationTotal} OF ${VIRTUAL_BUDGET} CREDITS SPENT` : `${Math.abs(allocationRemaining)} CREDITS OVER BUDGET`}
+                  {allocationRemaining >= 0 ? `$${allocationTotal.toLocaleString()} OF $${VIRTUAL_BUDGET.toLocaleString()} USED` : `$${Math.abs(allocationRemaining).toLocaleString()} OVER BUDGET`}
                 </p>
+                <p className="virtual-funds-disclaimer">Fantasy game funds only. This is not cash or a wallet balance.</p>
               </div>
               <div className="allocation-list">
                 {picks.map((stock, index) => (
@@ -523,7 +536,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     <span className="allocation-rank">0{index + 1}</span>
                     <span className="allocation-company">{stock.company}<small>{stock.ticker}</small></span>
                     <span className="allocation-bar"><i style={{ width: `${Math.min(100, (virtualAllocations[stock.ticker] ?? 0) / 10)}%`, background: stock.logoColor }} /></span>
-                    <strong className="allocation-cost">{virtualAllocations[stock.ticker] ?? 0} CR</strong>
+                    <strong className="allocation-cost">${(virtualAllocations[stock.ticker] ?? 0).toLocaleString()}</strong>
                   </div>
                 ))}
               </div>
@@ -701,9 +714,16 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
 
       {step === "select" && (
         <div className="sticky-action">
-          <div>
-            <p className="eyebrow">YOUR DRAFT</p>
-            <strong>{selected.length ? selected.join(" · ") : "NO PICKS YET"}</strong>
+          <div className="sticky-draft-summary">
+            <span>
+              <p className="eyebrow">YOUR DRAFT</p>
+              <strong>{selected.length ? selected.join(" · ") : "NO PICKS YET"}</strong>
+            </span>
+            <span className={selectionRemaining < 0 ? "over" : ""}>
+              <p className="eyebrow">VIRTUAL FUNDS LEFT</p>
+              <strong>{selectionRemaining < 0 ? "−" : ""}${Math.abs(selectionRemaining).toLocaleString()}</strong>
+              <small>GAME FUNDS · NOT CASH</small>
+            </span>
           </div>
           <button className="primary-action" disabled={selected.length < MIN_PICKS} onClick={lockDraft}>
             REVIEW SQUAD <ArrowRight size={18} />

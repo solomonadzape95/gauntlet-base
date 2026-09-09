@@ -33,7 +33,7 @@ export function StockCard({
       </div>
       <div className="stock-card-bottom">
         <h3>{stock.company}</h3>
-        <strong>{draftCost ? `${draftCost} CR` : "—"}</strong>
+        <strong>{draftCost ? `$${draftCost.toLocaleString()}` : "—"}</strong>
         {draftCost && <small className="draft-cost-note">DRAFT COST · ONCHAIN PRICED</small>}
       </div>
     </Tag>
