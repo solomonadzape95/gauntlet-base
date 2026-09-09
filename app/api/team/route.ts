@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { normalizeLineup } from "@/lib/battle-record";
 import { readChainlinkPrices } from "@/lib/chainlink-market";
-import { createDraftMarket, priceSquad, squadBank } from "@/lib/fantasy-market";
+import { createDraftMarket, priceSquad, priceTransferSquad, squadBank } from "@/lib/fantasy-market";
 import type { PracticeDraft } from "@/lib/practice-game";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { readActiveTeam, resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
   try { market = createDraftMarket(await readChainlinkPrices()); } catch {
     return withPlayerCookie(NextResponse.json({ error: "The transfer market is held until fresh onchain prices return." }, { status: 503 }), identity);
   }
-  const picks = priceSquad(tickers, market);
+  const active = await readActiveTeam(supabase, identity);
+  const picks = active ? priceTransferSquad(tickers, active.picks, market) : priceSquad(tickers, market);
   if (!picks || !normalizeLineup(picks)) return withPlayerCookie(NextResponse.json({ error: "Choose three to five affordable stocks within the 1,000-credit Squad Budget." }, { status: 400 }), identity);
   const saved = await supabase.rpc("save_priced_team", {
     p_owner_user_id: identity.userId,

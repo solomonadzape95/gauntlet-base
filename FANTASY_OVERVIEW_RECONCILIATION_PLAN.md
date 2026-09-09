@@ -131,6 +131,13 @@ Nebulas contributes structure, not its brand palette:
 - Vercel cron can call the authenticated GET route every minute using `CRON_SECRET`; POST remains available for an external scheduler and legacy `GAME_WEEK_CRON_SECRET` deployments.
 - Completed battle participants can create a rematch with the same duration. The rematch remains a new waiting battle with fresh teams and fresh opening prices when accepted.
 
+### B20-native product bet — next
+
+- Build an **Onchain Twin** for every team: the fantasy layer shows Draft Cost and score, while the wallet layer shows the player's verified B20 balance, total-return value, and how much of the lineup they actually own.
+- Make each stock row open a proof-backed detail view with the real Game Week price trace, Chainlink capture time, verified B20 contract, wallet balance, and the latest multiplier or corporate-action notice when available.
+- Let an eligible player buy only the missing parts of their lineup or rebalance the owned twin after a transfer. Never award gameplay points for spending; ownership is proof and utility, not pay-to-win.
+- This is a stronger submission bet than generic stock charts alone because it makes the fantasy-to-tokenized-stock conversion visible, auditable, and specific to B20's self-custody and total-return model.
+
 ### Product expansion checkpoint — 2026-09-08
 
 - `/draft` becomes the team headquarters after the first team is saved, with Squad, Transfers, and Market views.

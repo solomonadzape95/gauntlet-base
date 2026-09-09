@@ -61,7 +61,10 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
 
   const team = state?.team ?? active.team;
   const market = state?.market ?? [];
-  const selectionCost = selected.reduce((sum, ticker) => sum + (market.find((item) => item.ticker === ticker)?.draftCost ?? 0), 0);
+  const selectionCost = selected.reduce((sum, ticker) => {
+    const retained = team?.picks.find((pick) => pick.ticker === ticker);
+    return sum + (retained?.virtualAmount ?? market.find((item) => item.ticker === ticker)?.draftCost ?? 0);
+  }, 0);
   const bank = 1_000 - selectionCost;
   const projectedTransfers = team ? selected.filter((ticker) => !team.picks.some((pick) => pick.ticker === ticker)).length : 0;
   const projectedPenalty = Math.max(state?.penaltyPoints ?? 0, Math.max(0, (state?.transfersUsed ?? 0) + projectedTransfers - 1) * 25);
@@ -75,7 +78,7 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
   function toggle(ticker: string) {
     setMessage(null);
     setSelected((current) => {
-      if (current.includes(ticker)) return current.length > 3 ? current.filter((item) => item !== ticker) : current;
+      if (current.includes(ticker)) return current.filter((item) => item !== ticker);
       const cost = market.find((item) => item.ticker === ticker)?.draftCost ?? 0;
       return current.length < 5 && cost > 0 ? [...current, ticker] : current;
     });
@@ -86,7 +89,10 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
     setSaving(true);
     setMessage(null);
     try {
-      const saved = await saveActiveTeam(selected.map((ticker) => ({ ticker, virtualAmount: market.find((item) => item.ticker === ticker)?.draftCost ?? 0 })), session);
+      const saved = await saveActiveTeam(selected.map((ticker) => ({
+        ticker,
+        virtualAmount: team?.picks.find((pick) => pick.ticker === ticker)?.virtualAmount ?? market.find((item) => item.ticker === ticker)?.draftCost ?? 0,
+      })), session);
       setState((current) => current ? { ...current, team: saved, bank: squadBank(saved.picks), transfersUsed: current.transfersUsed + projectedTransfers, penaltyPoints: projectedPenalty } : current);
       setSelected(saved.picks.map((pick) => pick.ticker));
       setTab("squad");
@@ -101,17 +107,19 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
   return (
     <div className="team-room">
       <section className="team-identity-hero">
-        <div className="team-identity-copy">
-          <p className="eyebrow hazard">TEAM HEADQUARTERS · {state?.transferWindow.open ? "WINDOW OPEN" : "GAME WEEK LIVE"}</p>
-          <div className="team-name-lockup"><DitherAvatar seed={playerName} tone={profile?.avatar_tone ?? "hazard"} size={82} /><div><span>MANAGER</span><h1>{playerName}</h1></div></div>
-          <div className="team-command-grid">
-            <Link href="/battle"><Swords size={18} /><span>Challenge</span></Link>
-            <Link href="/leaderboard"><Trophy size={18} /><span>Game Week</span></Link>
-            <Link href="/leagues"><Shield size={18} /><span>Leagues</span></Link>
-            <Link href="/me#profile"><UserRound size={18} /><span>Profile</span></Link>
+        <div className="team-identity-main">
+          <div className="team-identity-copy">
+            <div className="team-name-lockup"><DitherAvatar seed={playerName} tone={profile?.avatar_tone ?? "hazard"} size={82} /><h1>{playerName.toLocaleLowerCase()}</h1></div>
+            <div className="team-command-grid">
+              <Link href="/battle"><Swords size={18} /><span>Challenge</span></Link>
+              <Link href="/leaderboard"><Trophy size={18} /><span>Game Week</span></Link>
+              <Link href="/leagues"><Shield size={18} /><span>Leagues</span></Link>
+              <Link href="/me#profile"><UserRound size={18} /><span>Profile</span></Link>
+            </div>
           </div>
+          <div className="team-total-score"><small>TOTAL SCORE</small><strong>{viewerPoints?.toLocaleString() ?? "0"}</strong><span>{state?.transferWindow.open ? "WINDOW OPEN" : "GAME WEEK LIVE"}</span></div>
         </div>
-        <div className="team-metrics"><span><small>GAME WEEK PTS</small><strong>{viewerPoints?.toLocaleString() ?? "—"}</strong></span><span><small>STOCKS</small><strong>{team.picks.length}</strong></span><span><small>BANK</small><strong>{state?.bank ?? squadBank(team.picks)} CR</strong></span></div>
+        <div className="team-metrics"><span><small>GAME WEEK PTS</small><strong>{viewerPoints?.toLocaleString() ?? "0"}</strong></span><span><small>STOCKS</small><strong>{team.picks.length}</strong></span><span><small>BANK</small><strong>{state?.bank ?? squadBank(team.picks)} CR</strong></span></div>
       </section>
 
       <nav className="team-tabs" aria-label="Team views">
@@ -128,21 +136,19 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
       </section>}
 
       {tab === "transfers" && <section className="transfer-desk">
-        <header><div><p className="eyebrow hazard">TRANSFER WINDOW</p><h2>RESHAPE THE TEAM</h2><p>One incoming stock is free each Game Week. Every additional incoming stock deducts 25 points from that week.</p></div><div className={`transfer-budget ${bank < 0 ? "over" : ""}`}><small>BANK AFTER MOVES</small><strong>{bank} CR</strong><span>{bank < 0 ? "REMOVE A STOCK TO CONFIRM" : projectedPenalty ? `−${projectedPenalty} PTS` : "FREE MOVE AVAILABLE"}</span></div></header>
+        <header><div><p className="eyebrow hazard">TRANSFERS</p><h2>SWAP OR ADD STOCKS</h2></div><div className={`transfer-budget ${bank < 0 ? "over" : ""}`}><small>BANK</small><strong>{bank} CR</strong><span>{bank < 0 ? "OVER BUDGET" : projectedPenalty ? `−${projectedPenalty} PTS` : "FREE MOVE AVAILABLE"}</span></div></header>
         {!state?.transferWindow.open && <div className="transfer-lock"><LockKeyhole size={20} /><div><strong>TEAM LOCKED</strong><p>The active Game Week must finish before this team can change.{state?.transferWindow.reopensAt ? ` Window reopens after ${new Date(state.transferWindow.reopensAt).toLocaleString()}.` : ""}</p></div></div>}
-        <div className="transfer-list">{STOCKS.map((stock) => {
-          const quote = market.find((item) => item.ticker === stock.ticker);
-          const chosen = selected.includes(stock.ticker);
-          const unaffordable = !chosen && selectionCost + (quote?.draftCost ?? 1_001) > 1_000;
-          return <button key={stock.ticker} disabled={!state?.transferWindow.open || !quote || (!chosen && selected.length >= 5)} onClick={() => toggle(stock.ticker)} className={chosen ? "selected" : ""}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker} · {stock.sector}</small></span><span><small>DRAFT COST</small><strong>{quote ? `${quote.draftCost} CR` : "HELD"}</strong></span><span className="transfer-action">{chosen ? "REMOVE" : unaffordable ? "ADD · OVER BUDGET" : "ADD"}</span></button>;
-        })}</div>
-        <div className="transfer-save"><span><Shuffle size={17} /> {projectedTransfers} INCOMING · {selected.length}/5 STOCKS</span><button className="primary-action" disabled={!changed || saving || selected.length < 3 || bank < 0 || !state?.transferWindow.open} onClick={() => void saveTransfers()}>{saving ? "SAVING…" : "CONFIRM TRANSFERS"} <ArrowRight size={16} /></button></div>
+        <div className="transfer-columns">
+          <section><header><strong>YOUR TEAM</strong><small>CLICK TO REMOVE</small></header><div className="transfer-list">{team.picks.map((pick) => { const stock = getStock(pick.ticker); if (!stock) return null; const kept = selected.includes(stock.ticker); return <button key={stock.ticker} disabled={!state?.transferWindow.open} onClick={() => toggle(stock.ticker)} className={kept ? "selected" : "removed"} style={{ "--stock-tone": stock.logoColor } as React.CSSProperties}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker}</small></span><span><small>SAVED COST</small><strong>{pick.virtualAmount} CR</strong></span><span className="transfer-action">{kept ? "REMOVE" : "ADD BACK"}</span></button>; })}</div></section>
+          <section><header><strong>MARKET</strong><small>CLICK TO ADD</small></header><div className="transfer-list">{STOCKS.filter((stock) => !team.picks.some((pick) => pick.ticker === stock.ticker)).map((stock) => { const quote = market.find((item) => item.ticker === stock.ticker); const chosen = selected.includes(stock.ticker); return <button key={stock.ticker} disabled={!state?.transferWindow.open || !quote || (!chosen && selected.length >= 5)} onClick={() => toggle(stock.ticker)} className={chosen ? "selected incoming" : ""} style={{ "--stock-tone": stock.logoColor } as React.CSSProperties}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker}</small></span><span><small>DRAFT COST</small><strong>{quote ? `${quote.draftCost} CR` : "HELD"}</strong></span><span className="transfer-action">{chosen ? "REMOVE" : "ADD"}</span></button>; })}</div></section>
+        </div>
+        <div className="transfer-save"><span><Shuffle size={17} /> {projectedTransfers} INCOMING · {selected.length}/5 STOCKS · FIRST MOVE FREE, THEN −25 PTS</span><button className="primary-action" disabled={!changed || saving || selected.length < 3 || bank < 0 || !state?.transferWindow.open} onClick={() => void saveTransfers()}>{saving ? "SAVING…" : "CONFIRM TRANSFERS"} <ArrowRight size={16} /></button></div>
         {message && <p className="battle-data-error">{message}</p>}
       </section>}
 
       {tab === "market" && <section className="market-ledger"><div className="squad-board-heading"><div><p className="eyebrow">ONCHAIN MARKET</p><h2>EVERY AVAILABLE STOCK</h2></div><span>PRICES REFRESH SERVER-SIDE</span></div><div>{STOCKS.map((stock) => {
         const quote = market.find((item) => item.ticker === stock.ticker);
-        return <article key={stock.ticker}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker}</small></span><strong>{quote ? `${quote.draftCost} CR` : "HELD"}</strong><small>{quote ? `$${quote.price.toFixed(2)} REFERENCE` : "WAITING FOR FEED"}</small></article>;
+        return <article key={stock.ticker} style={{ "--stock-tone": stock.logoColor } as React.CSSProperties}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker}</small></span><strong>{quote ? `${quote.draftCost} CR` : "HELD"}</strong><small>{quote ? `$${quote.price.toFixed(2)} REFERENCE` : "WAITING FOR FEED"}</small></article>;
       })}</div></section>}
     </div>
   );

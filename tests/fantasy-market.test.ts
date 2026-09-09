@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createDraftMarket, draftCostFromOnchainPrice, priceSquad, squadBank, transferCount, transferPenaltyPoints } from "../lib/fantasy-market.ts";
+import { createDraftMarket, draftCostFromOnchainPrice, priceSquad, priceTransferSquad, squadBank, transferCount, transferPenaltyPoints } from "../lib/fantasy-market.ts";
 
 const point = (ticker: string, price: number, fresh = true) => ({ ticker, price, fresh, updatedAt: "2026-09-08T00:00:00.000Z" });
 
@@ -22,6 +22,30 @@ test("prices a valid affordable squad and leaves the rest in the bank", () => {
   ]);
   assert.equal(squadBank(squad!), 175);
   assert.equal(priceSquad(["NVDAc", "AAPLc", "TSLAc"], market.map((item) => ({ ...item, draftCost: 500 }))), null);
+});
+
+test("keeps saved costs for retained stocks and prices only incoming transfers at market", () => {
+  const saved = [
+    { ticker: "NVDAc", virtualAmount: 250 },
+    { ticker: "AAPLc", virtualAmount: 250 },
+    { ticker: "TSLAc", virtualAmount: 250 },
+    { ticker: "MSFTc", virtualAmount: 250 },
+  ];
+  const market = createDraftMarket([
+    point("NVDAc", 226),
+    point("AAPLc", 316),
+    point("TSLAc", 367),
+    point("MSFTc", 494),
+    point("MSTRc", 138),
+  ]);
+
+  assert.deepEqual(priceTransferSquad(["NVDAc", "AAPLc", "TSLAc", "MSFTc"], saved, market), saved);
+  assert.deepEqual(priceTransferSquad(["NVDAc", "AAPLc", "TSLAc", "MSTRc"], saved, market), [
+    { ticker: "NVDAc", virtualAmount: 250 },
+    { ticker: "AAPLc", virtualAmount: 250 },
+    { ticker: "TSLAc", virtualAmount: 250 },
+    { ticker: "MSTRc", virtualAmount: 138 },
+  ]);
 });
 
 test("counts incoming stocks and charges only after the free transfer", () => {
