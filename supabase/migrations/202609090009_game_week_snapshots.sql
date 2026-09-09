@@ -136,25 +136,27 @@ stable
 security definer
 set search_path = ''
 as $$
-  with ordered as (
+  with settings as (
+    select greatest(2, least(coalesce(p_limit, 240), 500))::bigint as sample_limit
+  ), ordered as (
     select snapshot.prices,
            snapshot.captured_at,
-           row_number() over (order by snapshot.captured_at) as row_number,
+           row_number() over (order by snapshot.captured_at) as row_position,
            count(*) over () as total_count
     from public.game_week_price_snapshots snapshot
     where snapshot.game_week_id = p_game_week_id
-  ), sampled as (
-    select ordered.*,
-           greatest(1, ceil(ordered.total_count::numeric / greatest(2, least(p_limit, 500)))::numeric)::bigint) as stride
-    from ordered
   )
-  select sampled.prices, sampled.captured_at
-  from sampled
-  where sampled.total_count <= greatest(2, least(p_limit, 500))
-     or sampled.row_number = 1
-     or sampled.row_number = sampled.total_count
-     or mod(sampled.row_number - 1, sampled.stride) = 0
-  order by sampled.captured_at;
+  select ordered.prices, ordered.captured_at
+  from ordered
+  cross join settings
+  where ordered.total_count <= settings.sample_limit
+     or ordered.row_position = 1
+     or ordered.row_position = ordered.total_count
+     or mod(
+       ordered.row_position - 1,
+       greatest(1::bigint, (ordered.total_count + settings.sample_limit - 1) / settings.sample_limit)
+     ) = 0
+  order by ordered.captured_at;
 $$;
 
 revoke execute on function public.activate_game_week_boundary(uuid, jsonb, timestamptz, timestamptz) from public, anon, authenticated;
