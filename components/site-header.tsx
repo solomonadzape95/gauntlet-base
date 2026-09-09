@@ -45,7 +45,7 @@ export function SiteHeader() {
         <div className="nav-menu-control">
           <button className={`nav-menu-trigger ${menuOpen ? "open" : ""}`} type="button" onClick={() => setOpenPath(menuOpen ? null : pathname)} aria-expanded={menuOpen} aria-controls="gauntlet-navigation">
             <span className="nav-menu-trigger-icon"><ActiveIcon size={15} aria-hidden /></span>
-            <span><small>CURRENT</small><strong>{activeLink?.label ?? "MENU"}</strong></span>
+            <span><strong>{activeLink?.label ?? "MENU"}</strong></span>
             {menuOpen ? <X size={16} aria-hidden /> : <Menu size={16} aria-hidden />}
           </button>
 
