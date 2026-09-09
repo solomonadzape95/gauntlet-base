@@ -22,6 +22,7 @@ Updated: September 9, 2026
 - Minute-bucketed durable Game Week opening/live/closing prices, shared score history, and real Nebulas-style performance traces.
 - Native Vercel cron configuration with authenticated GET support, settlement-before-activation ordering, and idempotent boundary functions.
 - Lightweight private leagues with create/join codes and the latest Game Week member table.
+- Independent five-minute Quick Leagues for recording: they snapshot league members' active teams against one real opening feed, refresh live, and settle without changing the normal Game Week.
 - Public team snapshots linked from Ranks and league member rows.
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
 - Recoverable per-stock transaction state with receipts and post-purchase B20 balance verification.
@@ -35,7 +36,7 @@ Updated: September 9, 2026
 
 ### 1. Durable game backend
 
-- Apply any pending migrations through `202609090009_game_week_snapshots.sql` in filename order. Migration `007` enables leagues, `008` enables wallet profiles, and `009` enables durable score history, atomic boundaries, and rematches.
+- Apply any pending migrations through `202609090010_league_sprints.sql` in filename order. Migration `010` adds isolated five-minute Quick League rounds for recording without changing the normal Game Week.
 - Validate creator/opponent synchronization and deduplicated funnel events against the live project.
 - Validate Game Week entry locking, shared opening prices, live ranking, and final settlement against the live project.
 - Validate server-priced transfers, active-week locking, penalty propagation, league creation, and two-account joining against the live project.

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
-import { TypefaceToggle } from "@/components/typeface-toggle";
 import "@fontsource/maple-mono/300.css";
 import "@fontsource/maple-mono/400.css";
 import "@fontsource/maple-mono/500.css";
@@ -37,7 +36,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <Providers>
           <div className="dither-overlay" aria-hidden />
           <SiteHeader />
-          <TypefaceToggle />
           <main>{children}</main>
         </Providers>
       </body>
