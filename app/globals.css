@@ -328,6 +328,10 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .demo-checkout-total span { margin-top: 8px; color: var(--dim); font-size: 9px; letter-spacing: .09em; }
 .demo-checkout-account { display: flex; justify-content: space-between; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--edge); font: 400 10px/1 var(--font-utility); letter-spacing: .08em; }
 .demo-checkout-account span { color: var(--faint); }
+.demo-checkout-disclaimer { margin: 14px 0 2px; padding: 13px 14px; border: 1px solid color-mix(in srgb,var(--hazard) 35%,var(--edge)); background: color-mix(in srgb,var(--hazard) 4%,transparent); }
+.demo-checkout-disclaimer strong,.demo-checkout-disclaimer span { display: block; }
+.demo-checkout-disclaimer strong { color: var(--hazard); font: 500 9px/1 var(--font-utility); letter-spacing: .11em; }
+.demo-checkout-disclaimer span { margin-top: 7px; color: var(--dim); font-size: 10px; line-height: 1.5; }
 .demo-checkout-assets > div { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--edge); }
 .demo-checkout-assets > div > span { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 9px; }
 .demo-checkout-assets > div > span:last-child { justify-items: end; }

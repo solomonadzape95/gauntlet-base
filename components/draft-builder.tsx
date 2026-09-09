@@ -604,7 +604,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                           {purchaseSession?.rows[index] && (
                             <small className={`purchase-row-status ${demoPurchaseState !== "idle" ? "demo" : purchaseSession.rows[index].status}`}>
                               {demoPurchaseState === "complete" || (demoPurchaseState === "running" && index < demoPurchaseIndex)
-                                ? "DEMO CONFIRMED"
+                                ? "CONFIRMED"
                                 : demoPurchaseState === "running" && index === demoPurchaseIndex
                                   ? "PROCESSING"
                                   : purchaseSession.rows[index].status === "confirmed"
@@ -624,11 +624,11 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   <div className={`integration-notice ${quoteState === "error" ? "error" : ""}`}>
                     <span className="status-dot" />
                     <p>
-                      <strong>{quoteState === "ready" ? "PRICES FOUND · PREVIEW ONLY" : quoteState === "error" ? tradeRestricted ? "TOKEN UNAVAILABLE THROUGH 0X" : "PRICE PREVIEW UNAVAILABLE" : "NO PURCHASE YET"}</strong>
+                      <strong>{quoteState === "ready" ? "PRICES FOUND · PREVIEW ONLY" : quoteState === "error" ? tradeRestricted ? "LIVE ROUTE UNAVAILABLE" : "PRICE PREVIEW UNAVAILABLE" : "NO PURCHASE YET"}</strong>
                       {quoteState === "ready"
                         ? "These estimates can change before you approve a purchase in your wallet."
                         : tradeRestricted
-                          ? "This provider cannot legally route the selected B20 asset. Adding wallet funds will not unlock this trade."
+                          ? "Our current provider cannot route the selected B20 asset. Adding wallet funds will not unlock this route."
                           : quoteError || "Connect a wallet and pass the eligibility check to preview live B20 prices."}
                     </p>
                   </div>
@@ -681,13 +681,13 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                       disabled={purchaseStarted || demoPurchaseState === "running"}
                       onClick={() => setDemoCheckoutOpen(true)}
                     >
-                      {demoPurchaseState === "complete" ? "VIEW DEMO RECEIPT" : "TRY DEMO PURCHASE"}
+                      {demoPurchaseState === "complete" ? "VIEW RECEIPT" : "PURCHASE STOCKS"}
                     </button>
                   )}
                   {demoPurchaseState === "complete" && purchaseState !== "complete" && (
                     <div className="purchase-complete demo-purchase-result">
                       <CheckCircle2 size={19} />
-                      <div><strong>DEMO PURCHASE COMPLETE</strong><span>Demo receipt only · no funds moved and no ownership was recorded.</span></div>
+                      <div><strong>PURCHASE PREVIEW COMPLETE</strong><span>Demo purchase only · no funds moved and no ownership was recorded.</span></div>
                     </div>
                   )}
                   {purchaseState === "complete" && (
@@ -737,20 +737,24 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
               </header>
               <div className="demo-checkout-body">
                 <div className="demo-checkout-title">
-                  <p className="eyebrow hazard">DEMO · NO BLOCKCHAIN TRANSACTION</p>
+                  <p className="eyebrow hazard">PURCHASE DETAILS</p>
                   <h2 id="demo-checkout-title">Confirm portfolio purchase</h2>
-                  <p>This demonstrates the checkout experience. It will not request a wallet signature, move funds, or create ownership.</p>
+                  <p>Review how your purchase is split across the stocks in this portfolio.</p>
                 </div>
-                <div className="demo-checkout-total"><small>TOTAL</small><strong>${realAmount.toFixed(2)}</strong><span>USDC ON BASE · DEMO</span></div>
-                <div className="demo-checkout-account"><span>ACCOUNT</span><strong>{address ? `${address.slice(0, 7)}…${address.slice(-5)}` : "DEMO WALLET"}</strong></div>
+                <div className="demo-checkout-total"><small>TOTAL</small><strong>${realAmount.toFixed(2)}</strong><span>USDC ON BASE</span></div>
+                <div className="demo-checkout-account"><span>ACCOUNT</span><strong>{address ? `${address.slice(0, 7)}…${address.slice(-5)}` : "WALLET PREVIEW"}</strong></div>
+                <div className="demo-checkout-disclaimer">
+                  <strong>DEMO PURCHASE · WHY?</strong>
+                  <span>Live execution is temporarily unavailable because our current routing provider does not authorize the selected B20 tokens. This preview will not request a wallet signature, move funds, or create stock ownership.</span>
+                </div>
                 <div className="demo-checkout-assets">
                   {picks.map((stock, index) => {
                     const checked = demoPurchaseState === "complete" || (demoPurchaseState === "running" && index < demoPurchaseIndex);
                     const processing = demoPurchaseState === "running" && index === demoPurchaseIndex;
-                    return <div key={stock.ticker}><span><i style={{ background: stock.logoColor }} /> <strong>{stock.company}</strong><small>{stock.ticker}</small></span><span><strong>${realSplit[index].toFixed(2)}</strong><small className={checked ? "done" : processing ? "processing" : ""}>{checked ? "DEMO CONFIRMED" : processing ? "PROCESSING…" : "READY"}</small></span></div>;
+                    return <div key={stock.ticker}><span><i style={{ background: stock.logoColor }} /> <strong>{stock.company}</strong><small>{stock.ticker}</small></span><span><strong>${realSplit[index].toFixed(2)}</strong><small className={checked ? "done" : processing ? "processing" : ""}>{checked ? "CONFIRMED" : processing ? "PROCESSING…" : "READY"}</small></span></div>;
                   })}
                 </div>
-                {demoPurchaseState === "complete" && <div className="demo-receipt-note"><CheckCircle2 size={19} /><span><strong>DEMO RECEIPT READY</strong><small>No transaction hash was created because nothing was submitted onchain.</small></span></div>}
+                {demoPurchaseState === "complete" && <div className="demo-receipt-note"><CheckCircle2 size={19} /><span><strong>RECEIPT PREVIEW READY</strong><small>No transaction hash was created because this demo was not submitted onchain.</small></span></div>}
                 <button
                   className="primary-action full demo-confirm"
                   disabled={demoPurchaseState === "running"}
@@ -759,8 +763,8 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   {demoPurchaseState === "running"
                     ? <><LoaderCircle className="spin" size={17} /> PROCESSING {Math.min(demoPurchaseIndex + 1, picks.length)} OF {picks.length}</>
                     : demoPurchaseState === "complete"
-                      ? "CLOSE DEMO RECEIPT"
-                      : "CONFIRM DEMO PURCHASE"}
+                      ? "CLOSE RECEIPT"
+                      : "CONFIRM PURCHASE"}
                 </button>
               </div>
             </motion.section>
