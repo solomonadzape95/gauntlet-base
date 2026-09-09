@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { leagueSprintState, rankLeagueSprint } from "../lib/league-sprint.ts";
+import { LEAGUE_SPRINT_MINUTES, leagueSprintState, rankLeagueSprint } from "../lib/league-sprint.ts";
 
-test("a recording sprint stays independent and runs for five minutes", () => {
+test("recording league runs for under three minutes", () => {
+  assert.equal(LEAGUE_SPRINT_MINUTES, 2);
+});
+
+test("a recording sprint becomes complete at its two-minute boundary", () => {
   const startsAt = "2026-09-09T12:00:00.000Z";
-  const endsAt = "2026-09-09T12:05:00.000Z";
-  assert.equal(leagueSprintState(startsAt, endsAt, new Date("2026-09-09T12:02:00.000Z")), "active");
-  assert.equal(leagueSprintState(startsAt, endsAt, new Date("2026-09-09T12:05:00.000Z")), "complete");
+  const endsAt = "2026-09-09T12:02:00.000Z";
+  assert.equal(leagueSprintState(startsAt, endsAt, new Date("2026-09-09T12:01:59.000Z")), "active");
+  assert.equal(leagueSprintState(startsAt, endsAt, new Date("2026-09-09T12:02:00.000Z")), "complete");
 });
 
 test("quick-league entries rank by real score and preserve ties", () => {

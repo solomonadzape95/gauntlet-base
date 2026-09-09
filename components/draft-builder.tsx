@@ -246,19 +246,14 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     }
   };
 
-  const enterOwnership = async () => {
+  const enterOwnership = () => {
     if (!allocationsValid) return;
     setTeamError("");
     const picks = selected.map((ticker) => ({
       ticker,
       virtualAmount: virtualAllocations[ticker],
     }));
-    let saved;
-    try { saved = await saveActiveTeam(picks, session); } catch (cause) {
-      setTeamError(cause instanceof Error ? cause.message : "Could not save this team.");
-      return;
-    }
-    const draft = savePracticeDraft(saved.picks);
+    const draft = savePracticeDraft(picks);
     const allocationCents = allocateByWeight(
       selected.map((ticker) => virtualAllocations[ticker]),
       realAmount * 100,
@@ -267,7 +262,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
       draftId: draft.id,
       walletAddress: address,
       realAmount,
-      picks: saved.picks.map((pick, index) => ({
+      picks: picks.map((pick, index) => ({
         ticker: pick.ticker,
         virtualAmount: pick.virtualAmount,
         allocationCents: allocationCents[index],
@@ -444,6 +439,11 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
       if (!isPurchaseSessionComplete(active)) throw new Error("Every stock must be balance-verified before this draft can be owned.");
       markPracticeDraftOwned(active.draftId);
       setPurchaseState("complete");
+      try {
+        await saveActiveTeam(active.picks.map(({ ticker, virtualAmount }) => ({ ticker, virtualAmount })), session);
+      } catch {
+        setTeamError("The stock balances were verified, but the fantasy team could not be saved. Use SAVE TEAM & PLAY to retry without buying again.");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "The purchase stopped before completion.";
       if (activeTicker) {
@@ -696,6 +696,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                       <div><strong>YOUR DRAFT IS NOW REAL</strong><span>{picks.length} stock balances verified in your wallet on Base.</span></div>
                     </div>
                   )}
+                  {teamError && <p className="purchase-message error">{teamError}</p>}
                   {purchaseSession?.rows.some((row) => row.txHash) && (
                     <div className="receipt-list">
                       {purchaseSession.rows.map((row) => row.txHash && (

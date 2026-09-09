@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   }
   const active = await readActiveTeam(supabase, identity);
   const picks = active ? priceTransferSquad(tickers, market) : priceSquad(tickers, market);
-  if (!picks || !normalizeLineup(picks)) return withPlayerCookie(NextResponse.json({ error: "Choose three to five affordable stocks within the 1,000-credit Squad Budget." }, { status: 400 }), identity);
+  if (!picks || !normalizeLineup(picks)) return withPlayerCookie(NextResponse.json({ error: "Choose three to five affordable stocks within the $1,000 virtual budget." }, { status: 400 }), identity);
   const saved = await supabase.rpc("save_priced_team", {
     p_owner_user_id: identity.userId,
     p_guest_session_hash: identity.userId ? null : identity.guestHash,

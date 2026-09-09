@@ -1,4 +1,4 @@
-export const LEAGUE_SPRINT_MINUTES = 5;
+export const LEAGUE_SPRINT_MINUTES = 2;
 
 export function leagueSprintState(startsAt: string, endsAt: string, now = new Date()): "active" | "complete" {
   const starts = Date.parse(startsAt);

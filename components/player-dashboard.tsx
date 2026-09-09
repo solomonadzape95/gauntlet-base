@@ -13,6 +13,7 @@ import { WalletButton } from "@/components/wallet-button";
 import { createDraftMarket, type DraftMarketStock } from "@/lib/fantasy-market";
 import { getStock } from "@/lib/stocks";
 import { useActiveTeam } from "@/lib/use-active-team";
+import { formatVirtualMoney } from "@/lib/virtual-money";
 
 export function PlayerDashboard() {
   const { isConnected, status } = useAccount();
@@ -43,7 +44,7 @@ export function PlayerDashboard() {
 
     <section className="dashboard-panel player-team-card">
       <div className="panel-heading"><div><p className="eyebrow">YOUR TEAM</p><h2>{team ? `${team.picks.length} STOCKS` : "NO TEAM YET"}</h2></div>{!team && <Link className="primary-action" href="/draft">DRAFT NOW <ArrowRight size={16} /></Link>}</div>
-      {team && <div className="dashboard-holdings">{team.picks.map((pick) => { const stock = getStock(pick.ticker); if (!stock) return null; const currentQuote = market.find((item) => item.ticker === pick.ticker); return <button type="button" key={pick.ticker} onClick={() => setProofTicker(pick.ticker)} aria-label={`Open ${stock.company} onchain details`}><span className="holding-logo" style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span><span><strong>{stock.company}</strong><small>{pick.ticker}</small></span><strong>{currentQuote ? `${currentQuote.draftCost} CR` : "HELD"}</strong><ArrowRight size={14} /></button>; })}</div>}
+      {team && <div className="dashboard-holdings">{team.picks.map((pick) => { const stock = getStock(pick.ticker); if (!stock) return null; const currentQuote = market.find((item) => item.ticker === pick.ticker); return <button type="button" key={pick.ticker} onClick={() => setProofTicker(pick.ticker)} aria-label={`Open ${stock.company} onchain details`}><span className="holding-logo" style={{ color: stock.logoColor }}><StockLogo ticker={pick.ticker} /></span><span><strong>{stock.company}</strong><small>{pick.ticker}</small></span><strong>{currentQuote ? formatVirtualMoney(currentQuote.draftCost) : "HELD"}</strong><ArrowRight size={14} /></button>; })}</div>}
       <div className="player-quick-actions"><Link href="/battle"><Swords size={18} /><span><strong>BATTLE</strong><small>Challenge a friend</small></span></Link><Link href="/leaderboard"><Trophy size={18} /><span><strong>GAME WEEK</strong><small>See your points</small></span></Link><Link href="/leagues"><Shield size={18} /><span><strong>LEAGUES</strong><small>Play with a group</small></span></Link></div>
     </section>
 
