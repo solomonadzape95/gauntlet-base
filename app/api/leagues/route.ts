@@ -5,7 +5,7 @@ import { hasUsablePrices, type PricePoint, type ScoredPick } from "@/lib/battle-
 import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { scoreGameWeek } from "@/lib/game-week";
 import { readLatestGameWeekSnapshot } from "@/lib/game-week-snapshots";
-import { LEAGUE_SPRINT_MINUTES, leagueSprintState, rankLeagueSprint } from "@/lib/league-sprint";
+import { LEAGUE_SPRINT_MINUTES, leagueSprintState, rankLeagueSprint, scoreLeagueSprint, summarizeLeagueStocks } from "@/lib/league-sprint";
 import { readActiveTeam, resolvePlayerIdentity, withPlayerCookie, type PlayerIdentity } from "@/lib/player-identity";
 import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -64,22 +64,37 @@ export async function GET(request: NextRequest) {
   if ([...latestSprintByLeague.values()].some((sprint) => sprint.status === "active")) {
     try { sprintPrices = await readChainlinkPrices(); } catch { /* Quick League holds the last visible score until feeds return. */ }
   }
-  const quickPoints = new Map<string, { points: number; rank: number }>();
+  const quickResults = new Map<string, { points: number | null; rank: number | null; returnPercent: number | null; lineup: ScoredPick[] }>();
+  const quickStats = new Map<string, ReturnType<typeof summarizeLeagueStocks>>();
   for (const sprint of latestSprintByLeague.values()) {
     const sprintEntries = (sprintEntriesResult.data ?? []).filter((entry) => entry.sprint_id === sprint.id);
     const expired = leagueSprintState(sprint.starts_at, sprint.ends_at) === "complete";
     const scoringPrices = sprint.status === "complete" ? sprint.closing_prices : sprintPrices;
     const canScore = Boolean(scoringPrices && sprintEntries.every((entry) => hasUsablePrices(entry.lineup.map((pick) => pick.ticker), scoringPrices)));
     if (sprint.status === "active" && expired && canScore && scoringPrices) {
-      const finalRows = sprintEntries.map((entry) => ({ ...entry, points: scoreGameWeek(entry.lineup, sprint.opening_prices, scoringPrices).points }));
+      const finalRows = sprintEntries.map((entry) => ({ ...entry, ...scoreLeagueSprint(entry.lineup, sprint.opening_prices, scoringPrices) }));
       await Promise.all(finalRows.map((entry) => supabase.from("league_sprint_entries").update({ final_points: entry.points }).eq("id", entry.id)));
       const settled = await supabase.from("league_sprints").update({ status: "complete", closing_prices: scoringPrices }).eq("id", sprint.id).eq("status", "active");
       if (!settled.error) { sprint.status = "complete"; sprint.closing_prices = scoringPrices; }
-      for (const entry of rankLeagueSprint(finalRows)) quickPoints.set(`${sprint.league_id}:${playerReferenceKey(entry)}`, { points: entry.points, rank: entry.rank });
-    } else {
-      const rows = sprintEntries.map((entry) => ({ ...entry, points: sprint.status === "complete" ? entry.final_points ?? 1_000 : canScore && scoringPrices ? scoreGameWeek(entry.lineup, sprint.opening_prices, scoringPrices).points : 1_000 }));
-      for (const entry of rankLeagueSprint(rows)) quickPoints.set(`${sprint.league_id}:${playerReferenceKey(entry)}`, { points: entry.points, rank: entry.rank });
     }
+    const finalPrices = sprint.status === "complete" ? sprint.closing_prices : scoringPrices;
+    const rows = finalPrices && canScore
+      ? sprintEntries.map((entry) => {
+        const score = scoreLeagueSprint(entry.lineup, sprint.opening_prices, finalPrices);
+        return { ...entry, ...score, points: sprint.status === "complete" ? entry.final_points ?? score.points : score.points };
+      })
+      : [];
+    const ranked = rankLeagueSprint(rows);
+    for (const entry of sprintEntries) {
+      const result = ranked.find((row) => row.id === entry.id);
+      quickResults.set(`${sprint.league_id}:${playerReferenceKey(entry)}`, {
+        points: result?.points ?? entry.final_points,
+        rank: result?.rank ?? null,
+        returnPercent: result?.returnPercent ?? null,
+        lineup: entry.lineup,
+      });
+    }
+    if (finalPrices && canScore) quickStats.set(sprint.league_id, summarizeLeagueStocks(sprintEntries.map((entry) => entry.lineup), sprint.opening_prices, finalPrices));
   }
   const payload = (leagues.data ?? []).map((league) => ({
     id: league.id,
@@ -91,6 +106,7 @@ export async function GET(request: NextRequest) {
       status: latestSprintByLeague.get(league.id)!.status,
       startsAt: latestSprintByLeague.get(league.id)!.starts_at,
       endsAt: latestSprintByLeague.get(league.id)!.ends_at,
+      stats: quickStats.get(league.id) ?? null,
     } : null,
     members: (members.data ?? []).filter((member) => member.league_id === league.id).map((member) => ({
       name: profiles.get(playerReferenceKey(member))?.username ?? fallbackPlayerName(member),
@@ -98,8 +114,10 @@ export async function GET(request: NextRequest) {
       joinedAt: member.joined_at,
       teamEntryId: entryPoints.get(member.owner_user_id ? `user:${member.owner_user_id}` : `guest:${member.guest_session_hash}`)?.id ?? null,
       points: entryPoints.get(member.owner_user_id ? `user:${member.owner_user_id}` : `guest:${member.guest_session_hash}`)?.points ?? null,
-      quickPoints: quickPoints.get(`${league.id}:${playerReferenceKey(member)}`)?.points ?? null,
-      quickRank: quickPoints.get(`${league.id}:${playerReferenceKey(member)}`)?.rank ?? null,
+      quickPoints: quickResults.get(`${league.id}:${playerReferenceKey(member)}`)?.points ?? null,
+      quickRank: quickResults.get(`${league.id}:${playerReferenceKey(member)}`)?.rank ?? null,
+      quickReturnPercent: quickResults.get(`${league.id}:${playerReferenceKey(member)}`)?.returnPercent ?? null,
+      quickLineup: quickResults.get(`${league.id}:${playerReferenceKey(member)}`)?.lineup ?? null,
     })),
   }));
   return withPlayerCookie(NextResponse.json({ leagues: payload, quickLeagueReady }), identity);
