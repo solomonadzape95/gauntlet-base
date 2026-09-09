@@ -285,7 +285,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-row-status.confirmed { color: var(--signal); }
 .purchase-row-status.submitted { color: var(--ink); }
 .purchase-row-status.failed { color: var(--ember); }
-.purchase-row-status.rehearsed { color: var(--hazard); }
+.purchase-row-status.demo { color: var(--hazard); }
 .integration-notice, .data-notice, .battle-proof { display: flex; align-items: flex-start; gap: 14px; margin: 28px 0; padding: 16px; border: 1px solid color-mix(in srgb,var(--signal) 25%,var(--edge)); background: color-mix(in srgb,var(--signal) 5%,transparent); color: var(--dim); }
 .integration-notice .status-dot { margin-top: 5px; flex: 0 0 auto; }
 .integration-notice p, .data-notice p, .battle-proof p { margin: 0; font-size: 12px; line-height: 1.5; }
@@ -308,9 +308,40 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-next { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed var(--edge); background: transparent; color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
 .purchase-next.active { border-style: solid; border-color: var(--signal); color: var(--signal); }
 .purchase-next.active:hover:not(:disabled) { background: var(--signal); color: var(--void); }
-.purchase-rehearsal { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed color-mix(in srgb,var(--hazard) 65%,var(--edge)); background: color-mix(in srgb,var(--hazard) 4%,transparent); color: var(--hazard); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
-.purchase-rehearsal:hover:not(:disabled) { border-style: solid; background: var(--hazard); color: var(--void); }
-.purchase-rehearsal-result { border-color: color-mix(in srgb,var(--hazard) 45%,var(--edge)); background: color-mix(in srgb,var(--hazard) 5%,transparent); color: var(--hazard); }
+.purchase-demo { width: 100%; min-height: 46px; margin-top: 9px; border: 1px solid var(--hazard); background: var(--hazard); color: var(--void); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.purchase-demo:hover:not(:disabled) { background: transparent; color: var(--hazard); }
+.demo-purchase-result { border-color: color-mix(in srgb,var(--hazard) 45%,var(--edge)); background: color-mix(in srgb,var(--hazard) 5%,transparent); color: var(--hazard); }
+.demo-checkout-layer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; }
+.demo-checkout-scrim { position: absolute; inset: 0; border: 0; background: #000c; backdrop-filter: blur(8px); }
+.demo-checkout-sheet { position: relative; width: min(100%,500px); max-height: min(760px,calc(100svh - 40px)); overflow-y: auto; border: 1px solid var(--edge); background: var(--surface); box-shadow: 0 32px 100px #000; }
+.demo-checkout-sheet > header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 18px; border-bottom: 1px solid var(--edge); background: var(--surface); color: var(--ink); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.demo-checkout-sheet > header span { display: flex; align-items: center; gap: 9px; }
+.demo-checkout-sheet > header svg { color: var(--hazard); }
+.demo-checkout-sheet > header button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--edge); background: transparent; color: var(--faint); }
+.demo-checkout-body { padding: 26px; }
+.demo-checkout-title h2 { margin: 12px 0 10px; font: 400 30px/.95 var(--font-display); text-transform: uppercase; }
+.demo-checkout-title > p:last-child { margin: 0; color: var(--dim); font-size: 12px; line-height: 1.55; }
+.demo-checkout-total { margin-top: 24px; padding: 20px; border: 1px solid color-mix(in srgb,var(--hazard) 40%,var(--edge)); background: color-mix(in srgb,var(--hazard) 4%,transparent); }
+.demo-checkout-total small,.demo-checkout-total strong,.demo-checkout-total span { display: block; font-family: var(--font-utility); }
+.demo-checkout-total small { color: var(--faint); font-size: 8px; letter-spacing: .12em; }
+.demo-checkout-total strong { margin-top: 10px; color: var(--hazard); font-size: 36px; }
+.demo-checkout-total span { margin-top: 8px; color: var(--dim); font-size: 9px; letter-spacing: .09em; }
+.demo-checkout-account { display: flex; justify-content: space-between; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--edge); font: 400 10px/1 var(--font-utility); letter-spacing: .08em; }
+.demo-checkout-account span { color: var(--faint); }
+.demo-checkout-assets > div { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--edge); }
+.demo-checkout-assets > div > span { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 9px; }
+.demo-checkout-assets > div > span:last-child { justify-items: end; }
+.demo-checkout-assets i { grid-row: 1 / 3; width: 8px; height: 8px; }
+.demo-checkout-assets strong,.demo-checkout-assets small { font-family: var(--font-utility); }
+.demo-checkout-assets strong { font-size: 11px; }
+.demo-checkout-assets small { color: var(--faint); font-size: 8px; letter-spacing: .08em; }
+.demo-checkout-assets small.done { color: var(--signal); }
+.demo-checkout-assets small.processing { color: var(--hazard); }
+.demo-receipt-note { display: flex; align-items: flex-start; gap: 11px; margin-top: 18px; padding: 14px; border: 1px solid color-mix(in srgb,var(--signal) 35%,var(--edge)); color: var(--signal); }
+.demo-receipt-note span,.demo-receipt-note strong,.demo-receipt-note small { display: block; }
+.demo-receipt-note strong { font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.demo-receipt-note small { margin-top: 6px; color: var(--dim); font-size: 10px; line-height: 1.4; }
+.demo-confirm { margin-top: 18px; }
 .purchase-message { margin: 12px 0 0; font-size: 11px; line-height: 1.5; }
 .purchase-message.error { color: var(--ember); }
 .purchase-complete { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 15px; border: 1px solid color-mix(in srgb,var(--signal) 40%,var(--edge)); color: var(--signal); }

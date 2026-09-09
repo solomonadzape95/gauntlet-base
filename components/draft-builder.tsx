@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, CheckCircle2, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, LoaderCircle, LockKeyhole, ShieldCheck, WalletCards, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { erc20Abi, formatUnits, parseUnits, type Address, type Hex } from "viem";
@@ -84,8 +84,9 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
   const [purchaseError, setPurchaseError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
-  const [rehearsalState, setRehearsalState] = useState<"idle" | "running" | "complete">("idle");
-  const [rehearsalIndex, setRehearsalIndex] = useState(-1);
+  const [demoPurchaseState, setDemoPurchaseState] = useState<"idle" | "running" | "complete">("idle");
+  const [demoPurchaseIndex, setDemoPurchaseIndex] = useState(-1);
+  const [demoCheckoutOpen, setDemoCheckoutOpen] = useState(false);
   const [draftMarket, setDraftMarket] = useState<DraftMarketStock[]>([]);
   const [marketState, setMarketState] = useState<"loading" | "live" | "held">("loading");
 
@@ -181,8 +182,9 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     && selected.every((ticker) => (virtualAllocations[ticker] ?? 0) > 0);
   const confirmedCount = confirmedPurchaseCount(purchaseSession);
   const purchaseStarted = Boolean(purchaseSession?.rows.some((row) => row.status !== "ready" || row.txHash));
-  const purchaseRehearsalEnabled = process.env.NODE_ENV !== "production"
-    || process.env.NEXT_PUBLIC_ENABLE_PURCHASE_REHEARSAL === "true";
+  const tradeRestricted = /BUY_TOKEN_NOT_AUTHORIZED_FOR_TRADE|not authorized for trade due to legal restrictions/i.test(quoteError);
+  const demoPurchaseEnabled = process.env.NODE_ENV !== "production"
+    || process.env.NEXT_PUBLIC_ENABLE_DEMO_PURCHASE === "true";
 
   const persistPurchaseSession = (session: PurchaseSession) => {
     const saved = savePurchaseSession(session);
@@ -197,22 +199,23 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     setApproved(false);
     setPurchaseState("idle");
     setPurchaseError("");
-    setRehearsalState("idle");
-    setRehearsalIndex(-1);
+    setDemoPurchaseState("idle");
+    setDemoPurchaseIndex(-1);
+    setDemoCheckoutOpen(false);
   };
 
-  const rehearsePurchase = async () => {
-    if (!purchaseRehearsalEnabled || purchaseStarted || rehearsalState === "running") return;
-    setRehearsalState("running");
-    setRehearsalIndex(0);
+  const runDemoPurchase = async () => {
+    if (!demoPurchaseEnabled || purchaseStarted || demoPurchaseState === "running") return;
+    setDemoPurchaseState("running");
+    setDemoPurchaseIndex(0);
 
     for (let index = 0; index < picks.length; index += 1) {
-      setRehearsalIndex(index);
+      setDemoPurchaseIndex(index);
       await new Promise((resolve) => window.setTimeout(resolve, 360));
     }
 
-    setRehearsalIndex(picks.length);
-    setRehearsalState("complete");
+    setDemoPurchaseIndex(picks.length);
+    setDemoPurchaseState("complete");
   };
 
   const toggle = (ticker: string) => {
@@ -304,8 +307,8 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
 
   const previewPrices = async () => {
     if (!address || !eligible || !locationCheck.eligible || !purchaseSession) return;
-    setRehearsalState("idle");
-    setRehearsalIndex(-1);
+    setDemoPurchaseState("idle");
+    setDemoPurchaseIndex(-1);
     setQuoteState("loading");
     setQuoteError("");
 
@@ -578,7 +581,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     {[5, 10, 25].map((amount) => (
                       <button
                         key={amount}
-                        disabled={purchaseStarted || rehearsalState === "running"}
+                        disabled={purchaseStarted || demoPurchaseState === "running"}
                         onClick={() => changeRealAmount(amount)}
                         className={realAmount === amount ? "active" : ""}
                       >
@@ -599,11 +602,11 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                               : `$${realSplit[index].toFixed(2)}`}
                           </strong>
                           {purchaseSession?.rows[index] && (
-                            <small className={`purchase-row-status ${rehearsalState !== "idle" ? "rehearsed" : purchaseSession.rows[index].status}`}>
-                              {rehearsalState === "complete" || (rehearsalState === "running" && index < rehearsalIndex)
-                                ? "REHEARSAL CHECKED"
-                                : rehearsalState === "running" && index === rehearsalIndex
-                                  ? "REHEARSING"
+                            <small className={`purchase-row-status ${demoPurchaseState !== "idle" ? "demo" : purchaseSession.rows[index].status}`}>
+                              {demoPurchaseState === "complete" || (demoPurchaseState === "running" && index < demoPurchaseIndex)
+                                ? "DEMO CONFIRMED"
+                                : demoPurchaseState === "running" && index === demoPurchaseIndex
+                                  ? "PROCESSING"
                                   : purchaseSession.rows[index].status === "confirmed"
                                 ? "BALANCE VERIFIED"
                                 : purchaseSession.rows[index].status === "submitted"
@@ -621,10 +624,12 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   <div className={`integration-notice ${quoteState === "error" ? "error" : ""}`}>
                     <span className="status-dot" />
                     <p>
-                      <strong>{quoteState === "ready" ? "PRICES FOUND · PREVIEW ONLY" : quoteState === "error" ? "PRICE PREVIEW UNAVAILABLE" : "NO PURCHASE YET"}</strong>
+                      <strong>{quoteState === "ready" ? "PRICES FOUND · PREVIEW ONLY" : quoteState === "error" ? tradeRestricted ? "TOKEN UNAVAILABLE THROUGH 0X" : "PRICE PREVIEW UNAVAILABLE" : "NO PURCHASE YET"}</strong>
                       {quoteState === "ready"
                         ? "These estimates can change before you approve a purchase in your wallet."
-                        : quoteError || "Connect a wallet and pass the eligibility check to preview live B20 prices."}
+                        : tradeRestricted
+                          ? "This provider cannot legally route the selected B20 asset. Adding wallet funds will not unlock this trade."
+                          : quoteError || "Connect a wallet and pass the eligibility check to preview live B20 prices."}
                     </p>
                   </div>
 
@@ -647,7 +652,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   </label>
                   <button
                     className="primary-action full"
-                    disabled={!isConnected || !eligible || !locationCheck.eligible || quoteState === "loading" || rehearsalState === "running"}
+                    disabled={!isConnected || !eligible || !locationCheck.eligible || quoteState === "loading" || demoPurchaseState === "running"}
                     onClick={previewPrices}
                   >
                     {quoteState === "loading" ? <><LoaderCircle className="spin" size={17} /> CHECKING LIVE PRICES</> : quoteState === "ready" ? "REFRESH PRICE PREVIEW" : "PREVIEW LIVE PRICES"}
@@ -656,12 +661,12 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     <p className="purchase-message error">This wallet needs at least ${realAmount.toFixed(2)} in USDC on Base.</p>
                   )}
                   {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && !approved && (
-                    <button className="purchase-next active" disabled={purchaseState === "approving" || rehearsalState === "running"} onClick={approveDraft}>
+                    <button className="purchase-next active" disabled={purchaseState === "approving" || demoPurchaseState === "running"} onClick={approveDraft}>
                       {purchaseState === "approving" ? "WAITING FOR BASE CONFIRMATION…" : `APPROVE EXACTLY $${realAmount} USDC`}
                     </button>
                   )}
                   {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && approved && purchaseState !== "complete" && (
-                    <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying" || rehearsalState === "running"} onClick={buyDraft}>
+                    <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying" || demoPurchaseState === "running"} onClick={buyDraft}>
                       {purchaseState === "buying"
                         ? `VERIFYING STOCK ${Math.min(confirmedCount + 1, picks.length)} OF ${picks.length}…`
                         : purchaseStarted
@@ -670,23 +675,19 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     </button>
                   )}
                   {purchaseState === "error" && <p className="purchase-message error">{purchaseError}</p>}
-                  {purchaseRehearsalEnabled && purchaseState !== "complete" && (
+                  {demoPurchaseEnabled && purchaseState !== "complete" && (
                     <button
-                      className="purchase-rehearsal"
-                      disabled={purchaseStarted || rehearsalState === "running"}
-                      onClick={() => void rehearsePurchase()}
+                      className="purchase-demo"
+                      disabled={purchaseStarted || demoPurchaseState === "running"}
+                      onClick={() => setDemoCheckoutOpen(true)}
                     >
-                      {rehearsalState === "running"
-                        ? `REHEARSING ${Math.min(rehearsalIndex + 1, picks.length)} OF ${picks.length}…`
-                        : rehearsalState === "complete"
-                          ? "RUN REHEARSAL AGAIN"
-                          : "REHEARSE PURCHASE · NO TRANSACTION"}
+                      {demoPurchaseState === "complete" ? "VIEW DEMO RECEIPT" : "TRY DEMO PURCHASE"}
                     </button>
                   )}
-                  {rehearsalState === "complete" && purchaseState !== "complete" && (
-                    <div className="purchase-complete purchase-rehearsal-result">
+                  {demoPurchaseState === "complete" && purchaseState !== "complete" && (
+                    <div className="purchase-complete demo-purchase-result">
                       <CheckCircle2 size={19} />
-                      <div><strong>REHEARSAL COMPLETE · NOT OWNED</strong><span>No funds moved, no wallet transaction was requested, and no ownership was recorded.</span></div>
+                      <div><strong>DEMO PURCHASE COMPLETE</strong><span>Demo receipt only · no funds moved and no ownership was recorded.</span></div>
                     </div>
                   )}
                   {purchaseState === "complete" && (
@@ -709,6 +710,61 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
               </div>
             </div>
           </motion.section>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {demoCheckoutOpen && (
+          <motion.div className="demo-checkout-layer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <button
+              className="demo-checkout-scrim"
+              aria-label="Close demo checkout"
+              disabled={demoPurchaseState === "running"}
+              onClick={() => setDemoCheckoutOpen(false)}
+            />
+            <motion.section
+              className="demo-checkout-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="demo-checkout-title"
+              initial={{ opacity: 0, y: 24, scale: .97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: .98 }}
+            >
+              <header>
+                <span><WalletCards size={18} /> GAUNTLET CHECKOUT</span>
+                <button aria-label="Close demo checkout" disabled={demoPurchaseState === "running"} onClick={() => setDemoCheckoutOpen(false)}><X size={17} /></button>
+              </header>
+              <div className="demo-checkout-body">
+                <div className="demo-checkout-title">
+                  <p className="eyebrow hazard">DEMO · NO BLOCKCHAIN TRANSACTION</p>
+                  <h2 id="demo-checkout-title">Confirm portfolio purchase</h2>
+                  <p>This demonstrates the checkout experience. It will not request a wallet signature, move funds, or create ownership.</p>
+                </div>
+                <div className="demo-checkout-total"><small>TOTAL</small><strong>${realAmount.toFixed(2)}</strong><span>USDC ON BASE · DEMO</span></div>
+                <div className="demo-checkout-account"><span>ACCOUNT</span><strong>{address ? `${address.slice(0, 7)}…${address.slice(-5)}` : "DEMO WALLET"}</strong></div>
+                <div className="demo-checkout-assets">
+                  {picks.map((stock, index) => {
+                    const checked = demoPurchaseState === "complete" || (demoPurchaseState === "running" && index < demoPurchaseIndex);
+                    const processing = demoPurchaseState === "running" && index === demoPurchaseIndex;
+                    return <div key={stock.ticker}><span><i style={{ background: stock.logoColor }} /> <strong>{stock.company}</strong><small>{stock.ticker}</small></span><span><strong>${realSplit[index].toFixed(2)}</strong><small className={checked ? "done" : processing ? "processing" : ""}>{checked ? "DEMO CONFIRMED" : processing ? "PROCESSING…" : "READY"}</small></span></div>;
+                  })}
+                </div>
+                {demoPurchaseState === "complete" && <div className="demo-receipt-note"><CheckCircle2 size={19} /><span><strong>DEMO RECEIPT READY</strong><small>No transaction hash was created because nothing was submitted onchain.</small></span></div>}
+                <button
+                  className="primary-action full demo-confirm"
+                  disabled={demoPurchaseState === "running"}
+                  onClick={() => demoPurchaseState === "complete" ? setDemoCheckoutOpen(false) : void runDemoPurchase()}
+                >
+                  {demoPurchaseState === "running"
+                    ? <><LoaderCircle className="spin" size={17} /> PROCESSING {Math.min(demoPurchaseIndex + 1, picks.length)} OF {picks.length}</>
+                    : demoPurchaseState === "complete"
+                      ? "CLOSE DEMO RECEIPT"
+                      : "CONFIRM DEMO PURCHASE"}
+                </button>
+              </div>
+            </motion.section>
+          </motion.div>
         )}
       </AnimatePresence>
 
