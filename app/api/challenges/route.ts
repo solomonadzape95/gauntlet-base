@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { BATTLE_RECORD_SELECTION, normalizeBattleDuration, normalizeLineup, type BattleRecord } from "@/lib/battle-record";
-import { readActiveTeam, resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
+import { BATTLE_RECORD_SELECTION, isUuid, normalizeBattleDuration, normalizeLineup, type BattleRecord } from "@/lib/battle-record";
+import { isSamePlayer, readActiveTeam, resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  let body: { durationMinutes?: unknown };
+  let body: { durationMinutes?: unknown; rematchOf?: unknown };
   try {
-    body = await request.json() as { durationMinutes?: unknown };
+    body = await request.json() as { durationMinutes?: unknown; rematchOf?: unknown };
   } catch {
     return NextResponse.json({ error: "The challenge request is not valid JSON." }, { status: 400 });
   }
-  const durationMinutes = normalizeBattleDuration(body.durationMinutes ?? 1440);
+  let durationMinutes = normalizeBattleDuration(body.durationMinutes ?? 1440);
   if (!durationMinutes) return NextResponse.json({ error: "Choose a one-hour or 24-hour challenge." }, { status: 400 });
+  const rematchOf = body.rematchOf == null ? null : typeof body.rematchOf === "string" && isUuid(body.rematchOf) ? body.rematchOf : "invalid";
+  if (rematchOf === "invalid") return NextResponse.json({ error: "That rematch reference is invalid." }, { status: 400 });
 
   const supabase = getSupabaseAdmin();
   if (!supabase) {
@@ -24,6 +26,14 @@ export async function POST(request: NextRequest) {
   try {
     const identity = await resolvePlayerIdentity(request, supabase);
     if (!identity) return NextResponse.json({ error: "Your session has expired. Verify your wallet again." }, { status: 401 });
+    if (rematchOf) {
+      const previous = await supabase.from("battles").select("status,duration_minutes,creator_user_id,creator_guest_hash,opponent_user_id,opponent_guest_hash").eq("id", rematchOf).maybeSingle<{ status: string; duration_minutes: number; creator_user_id: string | null; creator_guest_hash: string | null; opponent_user_id: string | null; opponent_guest_hash: string | null }>();
+      const participant = previous.data && (isSamePlayer(identity, previous.data.creator_user_id, previous.data.creator_guest_hash) || isSamePlayer(identity, previous.data.opponent_user_id, previous.data.opponent_guest_hash));
+      if (previous.error || !previous.data) return withPlayerCookie(NextResponse.json({ error: "That completed battle could not be found." }, { status: previous.error ? 503 : 404 }), identity);
+      if (previous.data.status !== "complete" || !participant) return withPlayerCookie(NextResponse.json({ error: "Only a player in a completed battle can start its rematch." }, { status: 403 }), identity);
+      durationMinutes = normalizeBattleDuration(previous.data.duration_minutes);
+      if (!durationMinutes) return withPlayerCookie(NextResponse.json({ error: "That battle cannot be rematched with its saved duration." }, { status: 409 }), identity);
+    }
     const team = await readActiveTeam(supabase, identity);
     const picks = normalizeLineup(team?.picks);
     if (!team || !picks) return withPlayerCookie(NextResponse.json({ error: "Create a complete active team before starting a challenge." }, { status: 409 }), identity);
@@ -37,6 +47,7 @@ export async function POST(request: NextRequest) {
       opening_prices: null,
       starts_at: null,
       ends_at: null,
+      rematch_of: rematchOf,
     }).select(BATTLE_RECORD_SELECTION).single<BattleRecord>();
 
     if (result.error) throw result.error;

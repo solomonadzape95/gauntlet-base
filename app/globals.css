@@ -469,6 +469,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .battle-lobby > div > p:last-child { max-width: 600px; margin: 20px 0 0; color: var(--dim); line-height: 1.6; }
 .battle-lobby .battle-data-error { color: var(--signal); }
 .battle-lobby .primary-action:disabled { cursor: wait; opacity: .55; }
+.battle-result-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
 .battle-choice-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
 .battle-choice-card { min-height: 440px; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(28px,4vw,48px); }
 .battle-choice-card.featured { border-color: color-mix(in srgb,var(--hazard) 42%,var(--edge)); background: radial-gradient(circle at 88% 12%,color-mix(in srgb,var(--hazard) 10%,transparent),transparent 34%),var(--surface); }
@@ -493,6 +494,12 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .leaderboard-row > span small { margin-top: 6px; color: var(--faint); font: 500 9px/1 var(--font-utility); letter-spacing: .06em; }
 .leaderboard-rank { color: var(--hazard); font: 400 22px/1 var(--font-utility); }
 .leaderboard-points { color: var(--signal); font: 400 24px/1 var(--font-utility); }
+.leaderboard-return { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+.leaderboard-return > span { font: 500 10px/1 var(--font-utility); }
+.performance-sparkline { display: block; width: 96px; height: 28px; overflow: visible; color: var(--hazard); }
+.performance-sparkline polyline { fill: none; stroke: currentColor; stroke-width: 1.75; vector-effect: non-scaling-stroke; }
+.performance-sparkline.down { color: var(--signal); }
+.performance-sparkline.empty { border-bottom: 1px dashed var(--edge-strong); }
 .leaderboard-empty { display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 180px; padding: 30px; color: var(--dim); text-align: center; }
 .leaderboard-team-link:hover strong { color: var(--hazard); }
 
@@ -513,6 +520,9 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .team-metrics small,.team-metrics strong { display: block; font-family: var(--font-utility); }
 .team-metrics small { color: var(--faint); font-size: 8px; letter-spacing: .12em; }
 .team-metrics strong { margin-top: 10px; color: var(--hazard); font-size: clamp(20px,2.4vw,32px); }
+.team-performance { grid-column: 1 / -1; padding: 24px clamp(20px,4vw,48px); border-top: 1px solid var(--edge); background-image: linear-gradient(var(--edge) 1px,transparent 1px),linear-gradient(90deg,var(--edge) 1px,transparent 1px); background-size: 32px 32px; }
+.team-performance > small { display: block; margin-bottom: 18px; color: var(--faint); font: 500 8px/1 var(--font-utility); letter-spacing: .12em; }
+.team-performance .performance-sparkline { width: 100%; height: 112px; filter: drop-shadow(0 0 7px color-mix(in srgb,var(--hazard) 34%,transparent)); }
 .team-tabs { display: grid; grid-template-columns: repeat(3,1fr); margin-top: 18px; border: 1px solid var(--edge); background: var(--surface); }
 .team-tabs button { min-height: 58px; border: 0; border-right: 1px solid var(--edge); background: transparent; color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .14em; text-transform: uppercase; }
 .team-tabs button:last-child { border-right: 0; }
@@ -719,6 +729,8 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
   .team-command-grid { grid-template-columns: repeat(2,1fr); margin-top: 34px; }
   .team-crest { display: none; }
   .team-metrics { grid-column: 1; }
+  .team-performance { grid-column: 1; padding: 20px 14px; }
+  .team-performance .performance-sparkline { height: 78px; }
   .team-metrics > span { padding: 16px 12px; }
   .team-metrics strong { font-size: 18px; }
   .team-tabs button { min-height: 50px; font-size: 8px; }

@@ -57,6 +57,7 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
   const [marketError, setMarketError] = useState<string | null>(null);
   const [loadingMarket, setLoadingMarket] = useState(false);
   const [shareState, setShareState] = useState<"idle" | "creating" | "copied" | "shared">("idle");
+  const [rematchState, setRematchState] = useState<"idle" | "creating" | "error">("idle");
   const openingPrices = activeSession?.openingPrices ?? [];
   const currentPrices = activeSession?.currentPrices ?? marketPreview;
 
@@ -242,6 +243,25 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
     window.setTimeout(() => setShareState("idle"), 1800);
   }
 
+  async function createRematch() {
+    if (!serverBattleId || !serverBattle) return;
+    setRematchState("creating");
+    try {
+      const response = await fetch("/api/challenges", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...playerHeaders(authSession) },
+        body: JSON.stringify({ durationMinutes: serverBattle.duration_minutes, rematchOf: serverBattleId }),
+      });
+      const result = await response.json() as { battle?: BattleRecord; error?: string };
+      if (!response.ok || !result.battle) throw new Error(result.error ?? "Could not create the rematch.");
+      clearBattleSession();
+      router.push(`/battle/demo?battle=${encodeURIComponent(result.battle.id)}`);
+    } catch (cause) {
+      setServerError(cause instanceof Error ? cause.message : "Could not create the rematch.");
+      setRematchState("error");
+    }
+  }
+
   if (serverLoading || (!activeSession && teamLoading)) return <div className="shell page-shell"><GauntletLoader label="LOADING YOUR TEAM" /></div>;
 
   if (intent.kind === "hub" || intent.kind === "create") {
@@ -313,7 +333,10 @@ function Battle({ searchParams }: { searchParams: ReturnType<typeof useSearchPar
             <Link className="primary-action" href={canOwnBattleDraft && activeSession ? `/draft?own=${encodeURIComponent(activeSession.playerDraftId)}` : "/draft"}>{canOwnBattleDraft ? "OWN THIS LINEUP" : "BUILD A LINEUP"} <ArrowRight size={16} /></Link>
             </section>
           </>}
-          {serverBattleId ? <button className="secondary-action battle-share" disabled={shareState === "creating"} onClick={() => void shareChallenge()}>{shareState === "idle" || shareState === "creating" ? <Copy size={15} /> : <Check size={15} />}{shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "SHARE THIS BATTLE"}</button> : <Link className="secondary-action battle-share" href="/battle">CREATE A FRIEND CHALLENGE</Link>}
+          <div className="battle-result-actions">
+            {serverBattleId ? <button className="secondary-action battle-share" disabled={shareState === "creating"} onClick={() => void shareChallenge()}>{shareState === "idle" || shareState === "creating" ? <Copy size={15} /> : <Check size={15} />}{shareState === "shared" ? "CHALLENGE SHARED" : shareState === "copied" ? "CHALLENGE LINK COPIED" : "SHARE THIS BATTLE"}</button> : <Link className="secondary-action battle-share" href="/battle">CREATE A FRIEND CHALLENGE</Link>}
+            {isComplete && serverBattleId && serverRole !== "visitor" && <button className="primary-action" disabled={rematchState === "creating"} onClick={() => void createRematch()}>{rematchState === "creating" ? "CREATING REMATCH…" : rematchState === "error" ? "TRY REMATCH AGAIN" : "REMATCH"} <ArrowRight size={16} /></button>}
+          </div>
         </>
       )}
     </div>

@@ -15,8 +15,11 @@ Updated: September 9, 2026
 - Address-bound wallet profile verification using a one-time signature, without depending on Supabase's Web3 auth provider.
 - Refresh-safe practice battles using official Base Chainlink total-return feeds, immutable openings, feed freshness, weighted scoring, ties, and final states.
 - Durable two-browser challenge links with account/guest-bound roles and selectable one-hour or 24-hour windows.
+- Participant-only rematches that preserve the previous duration while taking a fresh active-team snapshot when accepted.
 - Explicit battle desk separating fresh solo practice from durable friend challenges.
 - Scheduled Game Week entries, immutable team snapshots, performance points, and a week-specific leaderboard.
+- Minute-bucketed durable Game Week opening/live/closing prices, shared score history, and real Nebulas-style performance traces.
+- Native Vercel cron configuration with authenticated GET support, settlement-before-activation ordering, and idempotent boundary functions.
 - Lightweight private leagues with create/join codes and the latest Game Week member table.
 - Public team snapshots linked from Ranks and league member rows.
 - Optional wallet connection, eligibility confirmation, quote preview, USDC approval, and sequential purchase flow.
@@ -30,16 +33,16 @@ Updated: September 9, 2026
 
 ### 1. Durable game backend
 
-- Apply any pending migrations through `202609080008_wallet_profiles.sql` in filename order. Migration `007` enables leagues; `008` enables wallet profiles without the Supabase Web3 provider.
+- Apply any pending migrations through `202609090009_game_week_snapshots.sql` in filename order. Migration `007` enables leagues, `008` enables wallet profiles, and `009` enables durable score history, atomic boundaries, and rematches.
 - Validate creator/opponent synchronization and deduplicated funnel events against the live project.
 - Validate Game Week entry locking, shared opening prices, live ranking, and final settlement against the live project.
 - Validate server-priced transfers, active-week locking, penalty propagation, league creation, and two-account joining against the live project.
-- Configure a scheduler to `POST /api/game-weeks/tick` with `Authorization: Bearer $GAME_WEEK_CRON_SECRET` at least once per minute around market boundaries.
+- Deploy the included Vercel cron with a server-only `CRON_SECRET` (Pro/Enterprise), or configure an equivalent external once-per-minute GET scheduler.
 
-### 2. Real scoring data
+### 2. Real scoring validation
 
-- Persist live and final snapshots through the durable API and add rematch.
-- Verify scheduled boundary calls capture fresh opening and closing snapshots within the accepted timing tolerance.
+- Apply migration `009`, invoke the scheduler against the live project, and verify its minute-bucketed snapshots and atomic opening/settlement records.
+- Verify scheduled boundary calls capture fresh opening and closing snapshots within the accepted three-minute display tolerance.
 
 ### 3. Ownership completion
 

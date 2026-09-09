@@ -123,6 +123,14 @@ Nebulas contributes structure, not its brand palette:
 - Replaced the landing autoplay/simulated strip with user-controlled scrolling over the live onchain feed and simplified the hero and steps for first-time users.
 - Deliberately did not add decorative performance graphs. Historical charts become valuable only after timestamped score snapshots are persisted; drawing them from fabricated series would contradict the proof-first product.
 
+### Durable scoring checkpoint — 2026-09-09
+
+- Migration `202609090009_game_week_snapshots.sql` adds minute-bucketed opening, live, and closing snapshots plus atomic activation and settlement functions.
+- Ranks, leagues, and public teams now score from the same recent persisted snapshot. Direct page reads no longer produce viewer-specific Game Week scores.
+- Real score history now powers the performance traces; a missing or older-than-three-minutes scheduler snapshot explicitly holds the live ranking.
+- Vercel cron can call the authenticated GET route every minute using `CRON_SECRET`; POST remains available for an external scheduler and legacy `GAME_WEEK_CRON_SECRET` deployments.
+- Completed battle participants can create a rematch with the same duration. The rematch remains a new waiting battle with fresh teams and fresh opening prices when accepted.
+
 ### Product expansion checkpoint — 2026-09-08
 
 - `/draft` becomes the team headquarters after the first team is saved, with Squad, Transfers, and Market views.

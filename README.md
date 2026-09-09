@@ -32,3 +32,9 @@ The reused original logo is stored at [`assets/logo.svg`](./assets/logo.svg).
 ## Repository status
 
 This folder is the clean home for the tokenized-stock product. The previous Sui football-survival implementation has been preserved separately at [`../gauntlet-legacy-football`](../gauntlet-legacy-football).
+
+## Game Week scheduler
+
+Production Game Weeks use the authenticated `GET /api/game-weeks/tick` route. Apply every Supabase migration through `202609090009_game_week_snapshots.sql`, set a server-only `CRON_SECRET`, and deploy `vercel.json`. Vercel supplies that value as a bearer token on every cron invocation.
+
+The included once-per-minute schedule requires Vercel Pro or Enterprise. If the deployment is on Hobby, use an external scheduler with the same bearer-authenticated GET route; a once-daily Hobby cron is not precise enough to lock fair opening and closing prices.

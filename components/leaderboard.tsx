@@ -6,11 +6,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useGauntletAuth } from "@/components/gauntlet-auth";
 import { GauntletLoader } from "@/components/gauntlet-loader";
+import { PerformanceSparkline } from "@/components/performance-sparkline";
 import { playerHeaders } from "@/lib/team-client";
 import { useActiveTeam } from "@/lib/use-active-team";
 
 type Week = { id: string; label: string; status: "upcoming" | "active" | "complete"; entry_lock_at: string; starts_at: string; ends_at: string };
-type Entry = { id: string; rank: number | null; name: string; picks: string[]; returnPercent: number | null; points: number | null; transferPenaltyPoints: number };
+type Entry = { id: string; rank: number | null; name: string; picks: string[]; returnPercent: number | null; points: number | null; transferPenaltyPoints: number; history: { capturedAt: string; points: number; returnPercent: number }[] };
 
 export function Leaderboard() {
   const { session } = useGauntletAuth();
@@ -19,18 +20,20 @@ export function Leaderboard() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [joined, setJoined] = useState(false);
   const [marketDataStatus, setMarketDataStatus] = useState<"pending" | "live" | "held" | "final">("pending");
+  const [marketDataCapturedAt, setMarketDataCapturedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       const response = await fetch("/api/leaderboard", { cache: "no-store", headers: playerHeaders(session) });
-      const result = await response.json() as { week?: Week | null; entries?: Entry[]; viewerJoined?: boolean; marketDataStatus?: "pending" | "live" | "held" | "final"; error?: string };
+      const result = await response.json() as { week?: Week | null; entries?: Entry[]; viewerJoined?: boolean; marketDataStatus?: "pending" | "live" | "held" | "final"; marketDataCapturedAt?: string | null; error?: string };
       if (!response.ok) throw new Error(result.error ?? "Could not load the leaderboard.");
       setWeek(result.week ?? null);
       setEntries(result.entries ?? []);
       setJoined(Boolean(result.viewerJoined));
       setMarketDataStatus(result.marketDataStatus ?? "pending");
+      setMarketDataCapturedAt(result.marketDataCapturedAt ?? null);
       setMessage(null);
     } catch (cause) {
       setMessage(cause instanceof Error ? cause.message : "Could not load the leaderboard.");
@@ -64,7 +67,7 @@ export function Leaderboard() {
     <div className="shell page-shell leaderboard-page">
       <header className="dashboard-titlebar">
         <div><p className="eyebrow hazard">WEEKLY COMPETITION</p><h1>The leaderboard</h1></div>
-        <span className="battle-mode">1,000 BASE POINTS</span>
+        <span className="battle-mode">{marketDataStatus === "live" && marketDataCapturedAt ? `LIVE · ${new Date(marketDataCapturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : marketDataStatus.toUpperCase()}</span>
       </header>
 
       <section className="leaderboard-hero dashboard-panel">
@@ -81,7 +84,7 @@ export function Leaderboard() {
           <article className="leaderboard-row" key={entry.id}>
             <strong className="leaderboard-rank">{entry.rank ? String(entry.rank).padStart(2, "0") : "—"}</strong>
             <span><Link className="leaderboard-team-link" href={`/team/${entry.id}`}><strong>{entry.name}</strong><small>{entry.picks.join(" · ")}{entry.transferPenaltyPoints ? ` · −${entry.transferPenaltyPoints} TRANSFER PTS` : ""}</small></Link></span>
-            <strong className={entry.returnPercent != null && entry.returnPercent >= 0 ? "up" : "down"}>{entry.returnPercent == null ? "—" : `${entry.returnPercent >= 0 ? "+" : ""}${entry.returnPercent.toFixed(2)}%`}</strong>
+            <strong className={`leaderboard-return ${entry.returnPercent != null && entry.returnPercent >= 0 ? "up" : "down"}`}><PerformanceSparkline history={entry.history} label={`${entry.name} score`} /><span>{entry.returnPercent == null ? "—" : `${entry.returnPercent >= 0 ? "+" : ""}${entry.returnPercent.toFixed(2)}%`}</span></strong>
             <strong className="leaderboard-points">{entry.points == null ? "—" : entry.points.toLocaleString()}</strong>
           </article>
         )) : <div className="leaderboard-empty"><Trophy size={28} /><p>No teams entered yet. The first clean score belongs to whoever steps in first.</p></div>}

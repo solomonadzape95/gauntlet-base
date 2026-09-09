@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasUsablePrices, type PricePoint, type ScoredPick } from "@/lib/battle-scoring";
 import { normalizeLineup } from "@/lib/battle-record";
-import { readChainlinkPrices } from "@/lib/chainlink-market";
-import { rankGameWeek, scoreGameWeek } from "@/lib/game-week";
+import { buildGameWeekHistory, rankGameWeek, scoreGameWeek } from "@/lib/game-week";
+import { readGameWeekTimeline, readLatestGameWeekSnapshot } from "@/lib/game-week-snapshots";
 import { isSamePlayer, readActiveTeam, resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
 import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -19,6 +19,9 @@ type GameWeek = {
   ends_at: string;
   opening_prices: PricePoint[] | null;
   closing_prices: PricePoint[] | null;
+  opening_captured_at: string | null;
+  closing_captured_at: string | null;
+  last_snapshot_at: string | null;
 };
 
 type GameWeekEntry = {
@@ -38,7 +41,7 @@ export async function GET(request: NextRequest) {
   const identity = await resolvePlayerIdentity(request, supabase);
   if (!identity) return NextResponse.json({ error: "Your session has expired. Verify your wallet again." }, { status: 401 });
 
-  const weeks = await supabase.from("game_weeks").select("id,label,status,entry_lock_at,starts_at,ends_at,opening_prices,closing_prices").order("starts_at", { ascending: false }).limit(6).returns<GameWeek[]>();
+  const weeks = await supabase.from("game_weeks").select("id,label,status,entry_lock_at,starts_at,ends_at,opening_prices,closing_prices,opening_captured_at,closing_captured_at,last_snapshot_at").order("starts_at", { ascending: false }).limit(6).returns<GameWeek[]>();
   if (weeks.error) return NextResponse.json({ error: "Could not load the current game week." }, { status: 503 });
   const week = weeks.data.find((item) => item.status === "active") ?? weeks.data.find((item) => item.status === "upcoming") ?? weeks.data[0];
   if (!week) return withPlayerCookie(NextResponse.json({ week: null, entries: [], viewerJoined: false }), identity);
@@ -47,17 +50,18 @@ export async function GET(request: NextRequest) {
   if (rows.error) return NextResponse.json({ error: "Could not load game-week entries." }, { status: 503 });
 
   const profiles = await readPlayerPresentations(supabase, rows.data);
+  const timeline = week.opening_prices ? await readGameWeekTimeline(supabase, week.id) : [];
   let currentPrices = week.closing_prices ?? week.opening_prices ?? [];
   let marketDataStatus: "pending" | "live" | "held" | "final" = week.status === "complete" ? "final" : week.status === "upcoming" ? "pending" : "held";
+  let marketDataCapturedAt = week.closing_captured_at ?? week.opening_captured_at;
   if (week.status === "active") {
-    try {
-      const livePrices = await readChainlinkPrices();
-      const selectedTickers = [...new Set(rows.data.flatMap((entry) => entry.lineup.map((pick) => pick.ticker)))];
-      if (hasUsablePrices(selectedTickers, livePrices)) {
-        currentPrices = livePrices;
-        marketDataStatus = "live";
-      }
-    } catch { /* A held feed is explicit in the response; never manufacture a zero return. */ }
+    const selectedTickers = [...new Set(rows.data.flatMap((entry) => entry.lineup.map((pick) => pick.ticker)))];
+    const latest = await readLatestGameWeekSnapshot(supabase, week.id, selectedTickers);
+    if (latest) {
+      currentPrices = latest.prices;
+      marketDataCapturedAt = latest.capturedAt;
+      marketDataStatus = "live";
+    }
   }
 
   const scored = rows.data.map((entry) => {
@@ -72,6 +76,7 @@ export async function GET(request: NextRequest) {
       returnBps: live?.returnBps ?? null,
       points: live ? Math.max(0, live.points - entry.transfer_penalty_points) : null,
       transferPenaltyPoints: entry.transfer_penalty_points,
+      history: week.opening_prices ? buildGameWeekHistory(entry.lineup, week.opening_prices, timeline, entry.transfer_penalty_points) : [],
     };
   });
   const entries = marketDataStatus === "live" || marketDataStatus === "final"
@@ -79,7 +84,7 @@ export async function GET(request: NextRequest) {
     : scored.map((entry) => ({ ...entry, rank: null }));
   const viewerJoined = rows.data.some((entry) => isSamePlayer(identity, entry.owner_user_id, entry.guest_session_hash));
   const viewerEntryId = rows.data.find((entry) => isSamePlayer(identity, entry.owner_user_id, entry.guest_session_hash))?.id ?? null;
-  return withPlayerCookie(NextResponse.json({ week: { ...week, opening_prices: undefined, closing_prices: undefined }, entries, viewerJoined, viewerEntryId, marketDataStatus }), identity);
+  return withPlayerCookie(NextResponse.json({ week: { ...week, opening_prices: undefined, closing_prices: undefined }, entries, viewerJoined, viewerEntryId, marketDataStatus, marketDataCapturedAt }), identity);
 }
 
 export async function POST(request: NextRequest) {

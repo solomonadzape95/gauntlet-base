@@ -2,8 +2,8 @@ import { randomBytes } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import { hasUsablePrices, type PricePoint, type ScoredPick } from "@/lib/battle-scoring";
-import { readChainlinkPrices } from "@/lib/chainlink-market";
 import { scoreGameWeek } from "@/lib/game-week";
+import { readLatestGameWeekSnapshot } from "@/lib/game-week-snapshots";
 import { resolvePlayerIdentity, withPlayerCookie } from "@/lib/player-identity";
 import { fallbackPlayerName, playerReferenceKey, readPlayerPresentations } from "@/lib/player-profiles";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -36,11 +36,9 @@ export async function GET(request: NextRequest) {
   const weekEntries = latestWeek ? await supabase.from("game_week_entries").select("id,owner_user_id,guest_session_hash,lineup,final_points,transfer_penalty_points").eq("game_week_id", latestWeek.id).returns<LeagueWeekEntry[]>() : { data: [] as LeagueWeekEntry[] };
   let livePrices: PricePoint[] | null = latestWeek?.closing_prices ?? null;
   if (latestWeek?.status === "active") {
-    try {
-      const current = await readChainlinkPrices();
-      const tickers = [...new Set((weekEntries.data ?? []).flatMap((entry) => entry.lineup.map((pick) => pick.ticker)))];
-      if (hasUsablePrices(tickers, current)) livePrices = current;
-    } catch { /* League scores remain held until fresh feeds return. */ }
+    const tickers = [...new Set((weekEntries.data ?? []).flatMap((entry) => entry.lineup.map((pick) => pick.ticker)))];
+    const latest = await readLatestGameWeekSnapshot(supabase, latestWeek.id, tickers);
+    if (latest) livePrices = latest.prices;
   }
   const entryPoints = new Map((weekEntries.data ?? []).map((entry) => {
     const liveScore = latestWeek?.status === "active" && latestWeek.opening_prices && livePrices
