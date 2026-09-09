@@ -268,6 +268,7 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-row-status.confirmed { color: var(--signal); }
 .purchase-row-status.submitted { color: var(--ink); }
 .purchase-row-status.failed { color: var(--ember); }
+.purchase-row-status.rehearsed { color: var(--hazard); }
 .integration-notice, .data-notice, .battle-proof { display: flex; align-items: flex-start; gap: 14px; margin: 28px 0; padding: 16px; border: 1px solid color-mix(in srgb,var(--signal) 25%,var(--edge)); background: color-mix(in srgb,var(--signal) 5%,transparent); color: var(--dim); }
 .integration-notice .status-dot { margin-top: 5px; flex: 0 0 auto; }
 .integration-notice p, .data-notice p, .battle-proof p { margin: 0; font-size: 12px; line-height: 1.5; }
@@ -290,6 +291,9 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .purchase-next { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed var(--edge); background: transparent; color: var(--faint); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
 .purchase-next.active { border-style: solid; border-color: var(--signal); color: var(--signal); }
 .purchase-next.active:hover:not(:disabled) { background: var(--signal); color: var(--void); }
+.purchase-rehearsal { width: 100%; min-height: 46px; margin-top: 9px; border: 1px dashed color-mix(in srgb,var(--hazard) 65%,var(--edge)); background: color-mix(in srgb,var(--hazard) 4%,transparent); color: var(--hazard); font: 500 10px/1 var(--font-utility); letter-spacing: .1em; }
+.purchase-rehearsal:hover:not(:disabled) { border-style: solid; background: var(--hazard); color: var(--void); }
+.purchase-rehearsal-result { border-color: color-mix(in srgb,var(--hazard) 45%,var(--edge)); background: color-mix(in srgb,var(--hazard) 5%,transparent); color: var(--hazard); }
 .purchase-message { margin: 12px 0 0; font-size: 11px; line-height: 1.5; }
 .purchase-message.error { color: var(--ember); }
 .purchase-complete { display: flex; gap: 12px; align-items: center; margin-top: 12px; padding: 15px; border: 1px solid color-mix(in srgb,var(--signal) 40%,var(--edge)); color: var(--signal); }
@@ -493,6 +497,11 @@ button.stock-card:hover:not(:disabled) { transform: translateY(-5px); border-col
 .leaderboard-team-link:hover strong { color: var(--hazard); }
 
 .team-room-loading { min-height: 50svh; display: grid; place-items: center; color: var(--hazard); font: 500 11px/1 var(--font-utility); letter-spacing: .14em; }
+.draft-auth-gate { min-height: min(620px,calc(100svh - 150px)); display: grid; place-content: center; justify-items: start; padding: clamp(34px,7vw,92px); background: radial-gradient(circle at 78% 45%,color-mix(in srgb,var(--hazard) 10%,transparent),transparent 30%),var(--surface); }
+.draft-auth-gate > div { max-width: 720px; }
+.draft-auth-gate h1 { margin: 16px 0 18px; font: 400 clamp(42px,7vw,88px)/.86 var(--font-display); letter-spacing: -.055em; text-transform: uppercase; }
+.draft-auth-gate p:not(.eyebrow) { max-width: 590px; margin: 0; color: var(--dim); font-size: 15px; line-height: 1.6; }
+.draft-auth-gate > .wallet-control { margin-top: 34px; min-width: min(100%,320px); }
 .team-identity-hero { position: relative; isolation: isolate; display: grid; grid-template-columns: 1fr; min-height: 440px; overflow: hidden; border: 1px solid var(--edge); background: var(--surface); }
 .team-identity-hero::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .12; background-image: radial-gradient(circle at 1px 1px,var(--hazard) .8px,transparent .9px); background-size: 5px 5px; mask-image: linear-gradient(90deg,transparent 28%,#000 100%); }
 .team-identity-main { display: grid; grid-template-columns: minmax(0,1fr) minmax(260px,34%); }

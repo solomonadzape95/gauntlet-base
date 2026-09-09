@@ -84,6 +84,8 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
   const [purchaseError, setPurchaseError] = useState("");
   const [teamError, setTeamError] = useState("");
   const [purchaseSession, setPurchaseSession] = useState<PurchaseSession | null>(null);
+  const [rehearsalState, setRehearsalState] = useState<"idle" | "running" | "complete">("idle");
+  const [rehearsalIndex, setRehearsalIndex] = useState(-1);
   const [draftMarket, setDraftMarket] = useState<DraftMarketStock[]>([]);
   const [marketState, setMarketState] = useState<"loading" | "live" | "held">("loading");
 
@@ -174,6 +176,8 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     && selected.every((ticker) => (virtualAllocations[ticker] ?? 0) > 0);
   const confirmedCount = confirmedPurchaseCount(purchaseSession);
   const purchaseStarted = Boolean(purchaseSession?.rows.some((row) => row.status !== "ready" || row.txHash));
+  const purchaseRehearsalEnabled = process.env.NODE_ENV !== "production"
+    || process.env.NEXT_PUBLIC_ENABLE_PURCHASE_REHEARSAL === "true";
 
   const persistPurchaseSession = (session: PurchaseSession) => {
     const saved = savePurchaseSession(session);
@@ -188,6 +192,22 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
     setApproved(false);
     setPurchaseState("idle");
     setPurchaseError("");
+    setRehearsalState("idle");
+    setRehearsalIndex(-1);
+  };
+
+  const rehearsePurchase = async () => {
+    if (!purchaseRehearsalEnabled || purchaseStarted || rehearsalState === "running") return;
+    setRehearsalState("running");
+    setRehearsalIndex(0);
+
+    for (let index = 0; index < picks.length; index += 1) {
+      setRehearsalIndex(index);
+      await new Promise((resolve) => window.setTimeout(resolve, 360));
+    }
+
+    setRehearsalIndex(picks.length);
+    setRehearsalState("complete");
   };
 
   const toggle = (ticker: string) => {
@@ -279,6 +299,8 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
 
   const previewPrices = async () => {
     if (!address || !eligible || !locationCheck.eligible || !purchaseSession) return;
+    setRehearsalState("idle");
+    setRehearsalIndex(-1);
     setQuoteState("loading");
     setQuoteError("");
 
@@ -543,7 +565,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     {[5, 10, 25].map((amount) => (
                       <button
                         key={amount}
-                        disabled={purchaseStarted}
+                        disabled={purchaseStarted || rehearsalState === "running"}
                         onClick={() => changeRealAmount(amount)}
                         className={realAmount === amount ? "active" : ""}
                       >
@@ -564,8 +586,12 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                               : `$${realSplit[index].toFixed(2)}`}
                           </strong>
                           {purchaseSession?.rows[index] && (
-                            <small className={`purchase-row-status ${purchaseSession.rows[index].status}`}>
-                              {purchaseSession.rows[index].status === "confirmed"
+                            <small className={`purchase-row-status ${rehearsalState !== "idle" ? "rehearsed" : purchaseSession.rows[index].status}`}>
+                              {rehearsalState === "complete" || (rehearsalState === "running" && index < rehearsalIndex)
+                                ? "REHEARSAL CHECKED"
+                                : rehearsalState === "running" && index === rehearsalIndex
+                                  ? "REHEARSING"
+                                  : purchaseSession.rows[index].status === "confirmed"
                                 ? "BALANCE VERIFIED"
                                 : purchaseSession.rows[index].status === "submitted"
                                   ? "SUBMITTED"
@@ -608,7 +634,7 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                   </label>
                   <button
                     className="primary-action full"
-                    disabled={!isConnected || !eligible || !locationCheck.eligible || quoteState === "loading"}
+                    disabled={!isConnected || !eligible || !locationCheck.eligible || quoteState === "loading" || rehearsalState === "running"}
                     onClick={previewPrices}
                   >
                     {quoteState === "loading" ? <><LoaderCircle className="spin" size={17} /> CHECKING LIVE PRICES</> : quoteState === "ready" ? "REFRESH PRICE PREVIEW" : "PREVIEW LIVE PRICES"}
@@ -617,12 +643,12 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     <p className="purchase-message error">This wallet needs at least ${realAmount.toFixed(2)} in USDC on Base.</p>
                   )}
                   {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && !approved && (
-                    <button className="purchase-next active" disabled={purchaseState === "approving"} onClick={approveDraft}>
+                    <button className="purchase-next active" disabled={purchaseState === "approving" || rehearsalState === "running"} onClick={approveDraft}>
                       {purchaseState === "approving" ? "WAITING FOR BASE CONFIRMATION…" : `APPROVE EXACTLY $${realAmount} USDC`}
                     </button>
                   )}
                   {quoteState === "ready" && !quotes.some((quote) => quote.balanceIssue) && approved && purchaseState !== "complete" && (
-                    <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying"} onClick={buyDraft}>
+                    <button className="purchase-next active" disabled={!isConnected || purchaseState === "buying" || rehearsalState === "running"} onClick={buyDraft}>
                       {purchaseState === "buying"
                         ? `VERIFYING STOCK ${Math.min(confirmedCount + 1, picks.length)} OF ${picks.length}…`
                         : purchaseStarted
@@ -631,6 +657,25 @@ export function DraftBuilder({ ownDraftId, returnTo }: { ownDraftId?: string; re
                     </button>
                   )}
                   {purchaseState === "error" && <p className="purchase-message error">{purchaseError}</p>}
+                  {purchaseRehearsalEnabled && purchaseState !== "complete" && (
+                    <button
+                      className="purchase-rehearsal"
+                      disabled={purchaseStarted || rehearsalState === "running"}
+                      onClick={() => void rehearsePurchase()}
+                    >
+                      {rehearsalState === "running"
+                        ? `REHEARSING ${Math.min(rehearsalIndex + 1, picks.length)} OF ${picks.length}…`
+                        : rehearsalState === "complete"
+                          ? "RUN REHEARSAL AGAIN"
+                          : "REHEARSE PURCHASE · NO TRANSACTION"}
+                    </button>
+                  )}
+                  {rehearsalState === "complete" && purchaseState !== "complete" && (
+                    <div className="purchase-complete purchase-rehearsal-result">
+                      <CheckCircle2 size={19} />
+                      <div><strong>REHEARSAL COMPLETE · NOT OWNED</strong><span>No funds moved, no wallet transaction was requested, and no ownership was recorded.</span></div>
+                    </div>
+                  )}
                   {purchaseState === "complete" && (
                     <div className="purchase-complete ownership-reveal">
                       <CheckCircle2 size={19} />

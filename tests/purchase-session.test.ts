@@ -24,6 +24,13 @@ test("creates a recoverable ready row for every pick", () => {
   assert.equal(isPurchaseSessionEditable(session), true);
 });
 
+test("a UI-only purchase rehearsal cannot count as ownership", () => {
+  const session = createPurchaseSession({ draftId: "draft-1", realAmount: 5, picks });
+  assert.equal(confirmedPurchaseCount(session), 0);
+  assert.equal(isPurchaseSessionComplete(session), false);
+  assert.equal(session.rows.some((row) => row.txHash), false);
+});
+
 test("requires a verified balance increase on every row before completion", () => {
   let session = createPurchaseSession({ draftId: "draft-1", realAmount: 5, picks });
   for (const pick of picks) {

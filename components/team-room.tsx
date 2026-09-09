@@ -10,6 +10,7 @@ import { GauntletLoader } from "@/components/gauntlet-loader";
 import { useGauntletAuth } from "@/components/gauntlet-auth";
 import { StockProofPanel } from "@/components/stock-proof-panel";
 import { StockLogo } from "@/components/stock-logo";
+import { WalletButton } from "@/components/wallet-button";
 import type { DraftMarketStock } from "@/lib/fantasy-market";
 import { squadBank } from "@/lib/fantasy-market";
 import type { PracticeDraft } from "@/lib/practice-game";
@@ -33,7 +34,7 @@ const previewMarket: DraftMarketStock[] = MARKET_QUOTES.map((quote) => ({ ticker
 const previewTeam: PracticeDraft = { id: "preview-team", createdAt: new Date(0).toISOString(), status: "virtual", picks: ["NVDAc", "AAPLc", "TSLAc"].map((ticker) => ({ ticker, virtualAmount: previewMarket.find((quote) => quote.ticker === ticker)!.draftCost })) };
 
 export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId?: string; returnTo?: string; preview?: boolean }) {
-  const { session, profile } = useGauntletAuth();
+  const { session, profile, status: authStatus, verified } = useGauntletAuth();
   const active = useActiveTeam();
   const [state, setState] = useState<TeamState | null>(preview ? { team: previewTeam, bank: squadBank(previewTeam.picks), market: previewMarket, transferWindow: { open: true }, transfersUsed: 0, penaltyPoints: 0 } : null);
   const [tab, setTab] = useState<Tab>("squad");
@@ -44,7 +45,7 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
   const [proofTicker, setProofTicker] = useState<string | null>(null);
 
   useEffect(() => {
-    if (preview) return;
+    if (preview || authStatus === "loading" || !verified) return;
     let cancelled = false;
     fetch("/api/team", { cache: "no-store", headers: playerHeaders(session) }).then(async (response) => {
       const result = await response.json() as TeamState & { error?: string };
@@ -59,7 +60,7 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
       if (!cancelled && result.viewerEntryId) setViewerPoints(result.entries?.find((entry) => entry.id === result.viewerEntryId)?.points ?? null);
     }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [preview, session]);
+  }, [authStatus, preview, session, verified]);
 
   const team = state?.team ?? active.team;
   const market = state?.market ?? [];
@@ -74,7 +75,8 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
   const changed = Boolean(team && (selected.length !== team.picks.length || selected.some((ticker) => !team.picks.some((pick) => pick.ticker === ticker))));
   const playerName = profile?.username ?? (preview ? "NEBULA_CAPTAIN" : "YOUR TEAM");
 
-  if (active.loading && !ownDraftId && !preview) return <GauntletLoader label="LOADING TEAM" />;
+  if ((authStatus === "loading" || active.loading) && !ownDraftId && !preview) return <GauntletLoader label="LOADING TEAM" />;
+  if (!verified && !preview) return <section className="draft-auth-gate dashboard-panel"><div><p className="eyebrow hazard">YOUR TEAM STARTS HERE</p><h1>Connect a wallet to draft.</h1><p>Your wallet keeps this team separate from everyone else and brings it back when you return.</p></div><WalletButton /></section>;
   if (ownDraftId || (!team && !active.loading)) return <DraftBuilder ownDraftId={ownDraftId} returnTo={returnTo} />;
   if (!team) return <div className="team-room-loading">{active.error ?? message ?? "TEAM UNAVAILABLE"}</div>;
 

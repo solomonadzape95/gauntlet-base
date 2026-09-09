@@ -46,7 +46,7 @@ export function WalletButton({ compact = false }: { compact?: boolean }) {
       <div className={controlClass}>
         <button className={`${buttonClass} connected-trigger`} onClick={() => setOpen((value) => !value)} aria-expanded={open}>
           <DitherAvatar seed={name} tone={auth.profile?.avatar_tone} size={26} />
-          <span>{auth.status === "signing" ? "VERIFYING…" : name}</span>
+          <span>{auth.status === "signing" ? "VERIFYING…" : auth.verified ? name : "VERIFY WALLET"}</span>
         </button>
 
         {typeof document !== "undefined" && createPortal(
