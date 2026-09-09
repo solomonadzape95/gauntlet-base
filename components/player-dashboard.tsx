@@ -33,7 +33,7 @@ export function PlayerDashboard() {
   if (status === "reconnecting") return <div className="dashboard-shell shell page-shell"><GauntletLoader label="RESTORING PLAYER" /></div>;
 
   if (!isConnected) {
-    return <div className="dashboard-shell shell page-shell"><section className="dashboard-gate dashboard-panel"><p className="eyebrow hazard">PLAYER</p><h1>Your team, name and wallet.</h1><p>Connect to manage your player. You can still draft and play for free without connecting.</p><div className="gate-actions"><WalletButton /><Link className="secondary-action" href="/draft">PLAY WITHOUT A WALLET</Link></div></section></div>;
+    return <div className="dashboard-shell shell page-shell"><section className="dashboard-gate dashboard-panel"><p className="eyebrow hazard">PLAYER</p><h1>Your team, name and wallet.</h1><p>Connect your wallet to manage your player and draft a team.</p><div className="gate-actions"><WalletButton /></div></section></div>;
   }
 
   if (loading) return <div className="dashboard-shell shell page-shell"><GauntletLoader label="LOADING PLAYER" /></div>;
