@@ -8,6 +8,7 @@ import { DitherAvatar } from "@/components/dither-avatar";
 import { DraftBuilder } from "@/components/draft-builder";
 import { GauntletLoader } from "@/components/gauntlet-loader";
 import { useGauntletAuth } from "@/components/gauntlet-auth";
+import { StockProofPanel } from "@/components/stock-proof-panel";
 import { StockLogo } from "@/components/stock-logo";
 import type { DraftMarketStock } from "@/lib/fantasy-market";
 import { squadBank } from "@/lib/fantasy-market";
@@ -40,6 +41,7 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [viewerPoints, setViewerPoints] = useState<number | null>(null);
+  const [proofTicker, setProofTicker] = useState<string | null>(null);
 
   useEffect(() => {
     if (preview) return;
@@ -131,7 +133,7 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
         <div className="squad-board-heading"><div><p className="eyebrow">ACTIVE TEAM</p><h2>{team.picks.length} STOCKS ON THE FLOOR</h2></div><span>{squadBank(team.picks)} CR BANKED</span></div>
         <div className="squad-strips">{team.picks.map((pick, index) => {
           const stock = getStock(pick.ticker);
-          return stock && <article key={pick.ticker} style={{ "--stock-tone": stock.tone } as React.CSSProperties}><span className="squad-number">0{index + 1}</span><span className="squad-logo"><StockLogo ticker={pick.ticker} /></span><span className="squad-company"><small>{stock.sector}</small><strong>{stock.company}</strong></span><span className="squad-price"><small>COST</small><strong>{pick.virtualAmount} CR</strong></span></article>;
+          return stock && <button type="button" className="squad-stock-row" key={pick.ticker} onClick={() => setProofTicker(pick.ticker)} aria-label={`Open ${stock.company} onchain details`} style={{ "--stock-tone": stock.tone } as React.CSSProperties}><span className="squad-number">0{index + 1}</span><span className="squad-logo"><StockLogo ticker={pick.ticker} /></span><span className="squad-company"><small>{stock.sector}</small><strong>{stock.company}</strong></span><span className="squad-price"><small>COST</small><strong>{pick.virtualAmount} CR</strong></span><ArrowRight className="squad-open" size={16} /></button>;
         })}</div>
       </section>}
 
@@ -148,8 +150,9 @@ export function TeamRoom({ ownDraftId, returnTo, preview = false }: { ownDraftId
 
       {tab === "market" && <section className="market-ledger"><div className="squad-board-heading"><div><p className="eyebrow">ONCHAIN MARKET</p><h2>EVERY AVAILABLE STOCK</h2></div><span>PRICES REFRESH SERVER-SIDE</span></div><div>{STOCKS.map((stock) => {
         const quote = market.find((item) => item.ticker === stock.ticker);
-        return <article key={stock.ticker} style={{ "--stock-tone": stock.logoColor } as React.CSSProperties}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker}</small></span><strong>{quote ? `${quote.draftCost} CR` : "HELD"}</strong><small>{quote ? `$${quote.price.toFixed(2)} REFERENCE` : "WAITING FOR FEED"}</small></article>;
+        return <button type="button" className="market-stock-row" key={stock.ticker} onClick={() => setProofTicker(stock.ticker)} aria-label={`Open ${stock.company} onchain details`} style={{ "--stock-tone": stock.logoColor } as React.CSSProperties}><span className="transfer-logo"><StockLogo ticker={stock.ticker} /></span><span><strong>{stock.company}</strong><small>{stock.ticker}</small></span><strong>{quote ? `${quote.draftCost} CR` : "HELD"}</strong><small>{quote ? `$${quote.price.toFixed(2)} REFERENCE` : "WAITING FOR FEED"}</small><ArrowRight size={15} /></button>;
       })}</div></section>}
+      <StockProofPanel ticker={proofTicker} savedCost={team.picks.find((pick) => pick.ticker === proofTicker)?.virtualAmount} marketQuote={market.find((quote) => quote.ticker === proofTicker)} onClose={() => setProofTicker(null)} />
     </div>
   );
 }

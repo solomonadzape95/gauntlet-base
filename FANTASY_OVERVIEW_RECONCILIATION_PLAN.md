@@ -138,6 +138,12 @@ Nebulas contributes structure, not its brand palette:
 - Let an eligible player buy only the missing parts of their lineup or rebalance the owned twin after a transfer. Never award gameplay points for spending; ownership is proof and utility, not pay-to-win.
 - This is a stronger submission bet than generic stock charts alone because it makes the fantasy-to-tokenized-stock conversion visible, auditable, and specific to B20's self-custody and total-return model.
 
+Progress — 2026-09-09:
+
+- Complete: squad and Market rows open a shared Onchain Twin panel with live Chainlink price, saved/current Draft Cost, real persisted Game Week trace, feed timestamp, allowlisted B20 contract, and connected-wallet balance.
+- Complete: the panel remains useful while RPC data is loading and labels preview values honestly; no synthetic chart series is drawn.
+- Next: add a one-stock ownership action that purchases only the missing B20 twin after a transfer, reusing the existing eligibility, exact-allowance, receipt, and balance-verification pipeline.
+
 ### Product expansion checkpoint — 2026-09-08
 
 - `/draft` becomes the team headquarters after the first team is saved, with Squad, Transfers, and Market views.
